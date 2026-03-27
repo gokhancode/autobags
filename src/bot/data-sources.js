@@ -206,11 +206,79 @@ async function enrichToken(mint, symbol) {
   };
 }
 
+// ── Bags Pool Analytics ────────────────────────────────────────────────────
+
+/**
+ * Check if a token has a Bags pool and get pool details
+ * Tokens with Bags pools get bonus points (platform-native)
+ */
+async function checkBagsPool(mint) {
+  try {
+    const BAGS_KEY = process.env.BAGS_API_KEY;
+    const res = await fetch(`https://public-api-v2.bags.fm/api/v1/solana/bags/pools/${mint}`, {
+      headers: { 'x-api-key': BAGS_KEY }
+    });
+    if (!res.ok) return { hasBagsPool: false, bagsScore: 0 };
+    const data = await res.json();
+    const pool = data?.response;
+    if (!pool) return { hasBagsPool: false, bagsScore: 0 };
+
+    return {
+      hasBagsPool: true,
+      bagsScore: 20, // bonus for being on Bags
+      poolKey: pool.poolKey,
+      migrated: pool.migrated || false,
+      meteoraDbc: pool.meteoraDbc || null,
+      dammV2: pool.dammV2 || null
+    };
+  } catch {
+    return { hasBagsPool: false, bagsScore: 0 };
+  }
+}
+
+/**
+ * Get all enriched data for a token (updated with Bags pool check)
+ */
+async function enrichTokenFull(mint, symbol) {
+  const [whale, social, holders, momentum, bagsPool] = await Promise.allSettled([
+    checkWhaleActivity(mint),
+    checkSocialSignals(mint, symbol),
+    analyzeHolders(mint),
+    checkMomentum(mint),
+    checkBagsPool(mint)
+  ]);
+
+  const w = whale.status === 'fulfilled' ? whale.value : { whaleScore: 0 };
+  const s = social.status === 'fulfilled' ? social.value : { socialScore: 0 };
+  const h = holders.status === 'fulfilled' ? holders.value : { holderScore: 50 };
+  const m = momentum.status === 'fulfilled' ? momentum.value : { momentumScore: 0 };
+  const b = bagsPool.status === 'fulfilled' ? bagsPool.value : { bagsScore: 0 };
+
+  // Weighted enrichment score (Bags pool bonus included)
+  const enrichmentScore = Math.min(100, Math.round(
+    w.whaleScore * 0.15 +
+    s.socialScore * 0.15 +
+    h.holderScore * 0.25 +
+    m.momentumScore * 0.25 +
+    b.bagsScore * 0.20   // 20% weight for Bags pool presence
+  ));
+
+  return {
+    enrichmentScore,
+    whale: w,
+    social: s,
+    holders: h,
+    momentum: m,
+    bagsPool: b
+  };
+}
+
 module.exports = {
   checkWhaleActivity,
   checkSocialSignals,
   analyzeHolders,
   checkMomentum,
-  enrichToken,
+  checkBagsPool,
+  enrichToken: enrichTokenFull, // use the full version
   WHALE_WALLETS
 };

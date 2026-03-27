@@ -139,6 +139,34 @@
     </div>
   </div>
 
+  <!-- Bags.fm Integration -->
+  <div class="panel">
+    <div class="panel-title">🎒 Bags.fm Partner</div>
+    <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-bottom:12px;">
+      <div style="font-size:11px; color:var(--muted);">Partner key: <span class="mono accent" style="font-size:10px;" id="partner-key"></span></div>
+      <button class="action-btn pause" onclick="initPartner()" id="btn-init" style="display:none;">Init on-chain</button>
+      <button class="action-btn pause" onclick="claimFees()" id="btn-claim">Claim fees</button>
+    </div>
+    <div class="cards" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));">
+      <div class="card">
+        <div class="card-label">Partner Status</div>
+        <div class="card-value" id="p-status" style="font-size:14px;">—</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Total Volume</div>
+        <div class="card-value" id="p-volume" style="font-size:14px;">—</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Fees Earned</div>
+        <div class="card-value green" id="p-fees" style="font-size:14px;">—</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Claimable</div>
+        <div class="card-value green" id="p-claimable" style="font-size:14px;">—</div>
+      </div>
+    </div>
+  </div>
+
   <!-- Users -->
   <div class="panel">
     <div class="panel-title">Users</div>
@@ -293,7 +321,66 @@
     }
   }
 
-  loadAdmin();
+  async function loadFees() {
+    document.getElementById('partner-key').textContent = '';
+    try {
+      const res = await fetch(`${API}/api/fees/stats`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+      const data = await res.json();
+      document.getElementById('partner-key').textContent = data.partnerKey || '—';
+      if (data.stats) {
+        document.getElementById('p-status').textContent = '✅ Active';
+        document.getElementById('p-status').style.color = 'var(--green)';
+        document.getElementById('p-volume').textContent = (data.stats.totalVolume || 0).toFixed(2) + ' SOL';
+        document.getElementById('p-fees').textContent = (data.stats.totalFees || 0).toFixed(4) + ' SOL';
+        document.getElementById('p-claimable').textContent = (data.stats.claimable || 0).toFixed(4) + ' SOL';
+      } else {
+        document.getElementById('p-status').textContent = '⏳ Not initialized';
+        document.getElementById('p-status').style.color = 'var(--yellow)';
+        document.getElementById('btn-init').style.display = 'inline-block';
+      }
+    } catch (e) {
+      document.getElementById('p-status').textContent = '—';
+    }
+
+    // Check claimable positions
+    try {
+      const res2 = await fetch(`${API}/api/fees/claimable`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+      const data2 = await res2.json();
+      if (data2.positions?.length) {
+        document.getElementById('p-claimable').textContent = data2.positions.length + ' positions';
+      }
+    } catch {}
+  }
+
+  async function initPartner() {
+    const btn = document.getElementById('btn-init');
+    btn.textContent = 'Creating...'; btn.disabled = true;
+    try {
+      const res = await fetch(`${API}/api/fees/init-partner`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }
+      });
+      const data = await res.json();
+      alert(data.success ? 'Partner config created!' : (data.error || 'Failed'));
+      loadFees();
+    } catch { alert('Error'); }
+    btn.textContent = 'Init on-chain'; btn.disabled = false;
+  }
+
+  async function claimFees() {
+    const btn = document.getElementById('btn-claim');
+    btn.textContent = 'Claiming...'; btn.disabled = true;
+    try {
+      const res = await fetch(`${API}/api/fees/claim`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }
+      });
+      const data = await res.json();
+      alert(data.success ? 'Fees claimed!' : (data.error || 'Failed'));
+      loadFees();
+    } catch { alert('Error'); }
+    btn.textContent = 'Claim fees'; btn.disabled = false;
+  }
+
+  loadAdmin(); loadFees();
   setInterval(loadAdmin, 30000);
 </script>
 </body>

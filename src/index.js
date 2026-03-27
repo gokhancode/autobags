@@ -23,6 +23,8 @@ app.use(express.static(path.join(__dirname, 'web')));
   app.use(`${prefix}/api/stats`,       require('./api/stats'));
   app.use(`${prefix}/api/sell`,        require('./api/sell'));
   app.use(`${prefix}/api/admin`,       require('./api/admin'));
+  app.use(`${prefix}/api/fees`,        require('./api/fees'));
+  app.use(`${prefix}/api/launch`,      require('./api/launch'));
 });
 
 // Global error handler
