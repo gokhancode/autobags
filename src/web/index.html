@@ -330,9 +330,12 @@
 
 <!-- DASHBOARD (shown after login) -->
 <div id="dashboard">
-  <div class="dash-header">
-    <h2>Dashboard</h2>
-    <p id="dash-userid" style="font-family:var(--mono); color:var(--accent2);"></p>
+  <div class="dash-header" style="display:flex; justify-content:space-between; align-items:flex-start;">
+    <div>
+      <h2>Dashboard</h2>
+      <p id="dash-userid" style="font-family:var(--mono); color:var(--accent2);"></p>
+    </div>
+    <button onclick="logout()" style="padding:8px 16px; background:transparent; border:1px solid var(--border); border-radius:8px; color:var(--muted); font-size:13px; cursor:pointer;">Log out</button>
   </div>
 
   <div class="cards">
@@ -577,6 +580,13 @@
     } catch {}
   }
 
+  function logout() {
+    localStorage.removeItem('autobags_session');
+    currentUser = null; authToken = null;
+    document.getElementById('dashboard').style.display = 'none';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
   function copyAddress() {
     const addr = document.getElementById('d-address').textContent;
     navigator.clipboard.writeText(addr).then(() => {
@@ -630,7 +640,19 @@
       const s = JSON.parse(saved);
       currentUser = { userId: s.userId, wallet: s.wallet };
       authToken   = s.token;
-    } catch {}
+      // Verify token is still valid then show dashboard
+      fetch(`${API}/api/auth/me`, {
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      }).then(r => r.json()).then(data => {
+        if (data.success) {
+          showDashboard();
+        } else {
+          // Token expired — clear and prompt login
+          localStorage.removeItem('autobags_session');
+          currentUser = null; authToken = null;
+        }
+      }).catch(() => {});
+    } catch { localStorage.removeItem('autobags_session'); }
   }
 
   loadStats();
