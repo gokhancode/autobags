@@ -52,22 +52,63 @@ router.get('/:userId', async (req, res) => {
     const userPositions = allPositions[userId] || {};
 
     for (const [mint, pos] of Object.entries(userPositions)) {
-      let currentPrice = null;
       let valueSol = 0;
       try {
-        const r = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${mint}`);
-        const d = await r.json();
-        const pair = d?.pairs?.[0];
-        if (pair && pos.solSpent) {
-          currentPrice = parseFloat(pair.priceUsd);
-          const entryPrice = pos.entryPrice || 0;
-          // Use price ratio to estimate current value in SOL
-          if (entryPrice > 0 && currentPrice > 0) {
-            const priceChange = currentPrice / entryPrice;
-            // Account for partial exits
-            const factor = pos.partialExited ? 0.7 : 1.0;
-            valueSol = pos.solSpent * priceChange * factor;
-          }
+        // Get actual on-chain token balance
+        const SOL_MINT = 'So11111111111111111111111111111111111111112';
+        const BAGS_KEY = process.env.BAGS_API_KEY;
+        let rawAmount = pos.tokensReceived;
+
+        try {
+          const tokenAccounts = await conn.getParsedTokenAccountsByOwner(
+            new PublicKey(walletPublicKey),
+            { mint: new PublicKey(mint) }
+          );
+          const onChainAmount = tokenAccounts.value?.[0]?.account?.data?.parsed?.info?.tokenAmount?.amount;
+          if (onChainAmount) rawAmount = onChainAmount;
+        } catch {}
+
+        // Method 1: Bags trade quote (most accurate for Bags tokens)
+        if (BAGS_KEY && rawAmount) {
+          try {
+            const qRes = await fetch(
+              `https://public-api-v2.bags.fm/api/v1/trade/quote?inputMint=${mint}&outputMint=${SOL_MINT}&amount=${rawAmount}`,
+              { headers: { 'x-api-key': BAGS_KEY } }
+            );
+            const qData = await qRes.json();
+            if (qData?.success && qData?.response?.outAmount) {
+              valueSol = parseInt(qData.response.outAmount) / 1e9;
+            }
+          } catch {}
+        }
+
+        // Method 2: Jupiter price fallback
+        if (valueSol === 0) {
+          try {
+            const jupRes = await fetch(`https://api.jup.ag/price/v2?ids=${mint}&vsToken=${SOL_MINT}`);
+            const jupData = await jupRes.json();
+            const priceInSol = parseFloat(jupData?.data?.[mint]?.price || 0);
+            if (priceInSol > 0) {
+              const uiAmount = parseFloat(rawAmount) / 1e9; // assume 9 decimals
+              valueSol = uiAmount * priceInSol;
+            }
+          } catch {}
+        }
+
+        // Method 3: DexScreener fallback
+        if (valueSol === 0) {
+          try {
+            const r = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${mint}`);
+            const d = await r.json();
+            const pair = d?.pairs?.find(p => p.chainId === 'solana');
+            if (pair && pos.solSpent) {
+              const currentPrice = parseFloat(pair.priceUsd);
+              const entryPrice = pos.entryPrice || 0;
+              if (entryPrice > 0 && currentPrice > 0) {
+                valueSol = pos.solSpent * (currentPrice / entryPrice);
+              }
+            }
+          } catch {}
         }
       } catch {}
       const pnlPct = pos.solSpent > 0 ? ((valueSol - pos.solSpent) / pos.solSpent * 100) : 0;
