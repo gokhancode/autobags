@@ -347,7 +347,9 @@
 </footer>
 
 <script>
-  const API = window.location.origin;
+  // Detect base path — works whether served at /autobags or root
+  const BASE = window.location.pathname.startsWith('/autobags') ? '/autobags' : '';
+  const API  = BASE;
   let currentUser = null;
 
   // ── Modal ──────────────────────────────────────────────────────────────────

@@ -7,17 +7,20 @@ const app     = express();
 app.use(cors());
 app.use(express.json());
 
-// Serve web UI
+// Serve web UI — both at root and /autobags prefix
+app.use('/autobags', express.static(path.join(__dirname, 'web')));
 app.use(express.static(path.join(__dirname, 'web')));
 
-// API routes
-app.use('/api/subscribers', require('./api/subscribers'));
-app.use('/api/portfolio',   require('./api/portfolio'));
-app.use('/api/trades',      require('./api/trades'));
-app.use('/api/status',      require('./api/status'));
-app.use('/api/stats',       require('./api/stats'));
+// API routes — both prefixed and non-prefixed
+['', '/autobags'].forEach(prefix => {
+  app.use(`${prefix}/api/subscribers`, require('./api/subscribers'));
+  app.use(`${prefix}/api/portfolio`,   require('./api/portfolio'));
+  app.use(`${prefix}/api/trades`,      require('./api/trades'));
+  app.use(`${prefix}/api/status`,      require('./api/status'));
+  app.use(`${prefix}/api/stats`,       require('./api/stats'));
+});
 
-// Fallback to index.html for SPA
+// Fallback to index.html
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'web', 'index.html'));
 });
