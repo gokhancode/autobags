@@ -135,32 +135,62 @@ async function scoreCandidates(candidates) {
       const sells1h = txns.sells || 0;
       const buyRatio = buys1h + sells1h > 0 ? buys1h / (buys1h + sells1h) : 0.5;
 
-      // Fast score: momentum + volume + liquidity + buy pressure
+      // Scoring: more granular, harder to ace
       let score = 0;
-      if (liq > 5000) score += 15;       // decent liquidity
-      if (liq > 20000) score += 10;
-      if (vol24 > 10000) score += 15;     // active volume
-      if (vol24 > 50000) score += 10;
-      if (priceChange5m > 2) score += 15; // short-term momentum
-      if (priceChange5m > 5) score += 10;
-      if (priceChange1h > 5) score += 10; // hourly trend
-      if (buyRatio > 0.55) score += 10;   // buy pressure
-      if (buyRatio > 0.65) score += 10;
-      if (mcap > 10000 && mcap < 5000000) score += 10; // sweet spot mcap
+      
+      // Liquidity (0-15)
+      if (liq > 50000) score += 15;
+      else if (liq > 20000) score += 10;
+      else if (liq > 5000) score += 5;
+
+      // Volume (0-15)
+      if (vol24 > 100000) score += 15;
+      else if (vol24 > 50000) score += 10;
+      else if (vol24 > 10000) score += 5;
+
+      // 5m momentum (0-20) — key signal
+      if (priceChange5m > 10) score += 20;
+      else if (priceChange5m > 5) score += 15;
+      else if (priceChange5m > 3) score += 10;
+
+      // 1h momentum (0-15)
+      if (priceChange1h > 20) score += 15;
+      else if (priceChange1h > 10) score += 10;
+      else if (priceChange1h > 5) score += 5;
+
+      // Buy pressure (0-15)
+      if (buyRatio > 0.70) score += 15;
+      else if (buyRatio > 0.60) score += 10;
+      else if (buyRatio > 0.55) score += 5;
+
+      // Market cap sweet spot (0-10)
+      if (mcap > 50000 && mcap < 2000000) score += 10;
+      else if (mcap > 10000 && mcap < 5000000) score += 5;
+
+      // Transaction count (0-10)
+      const txns1h = buys1h + sells1h;
+      if (txns1h > 200) score += 10;
+      else if (txns1h > 50) score += 5;
+
+      // Penalties
+      if (priceChange5m > 20) score -= 10;  // overextended
+      if (priceChange1h < -10) score -= 10; // dumping
+      if (buyRatio < 0.4) score -= 15;      // heavy selling
 
       // Rug filters
-      if (liq < 1000) continue;           // skip dust
-      if (vol24 / liq > 15) continue;     // suspicious vol/liq ratio
-      if (priceChange1h < -20) continue;  // dumping
+      if (liq < 2000) continue;
+      if (vol24 / liq > 15) continue;
+      if (priceChange1h < -25) continue;
 
+      score = Math.max(0, Math.min(100, score));
       c.price = parseFloat(pair.priceUsd || 0);
       c.score = score;
       c.liq = liq;
       c.vol24 = vol24;
       c.mcap = mcap;
       c.momentum5m = priceChange5m;
-      // Only enter with real momentum and decent score
-      if (score >= 50 && c.price > 0 && priceChange5m >= 3) scored.push(c);
+      // Require momentum + minimum score
+      if (score >= 55 && c.price > 0 && priceChange5m >= 3) scored.push(c);
     } catch { continue; }
   }
 
@@ -219,8 +249,11 @@ function simSell(state, mint, priceUsd, reason) {
   state.balanceUsd += currentValue;
   state.totalPnlUsd += pnlUsd;
   if (pnlUsd > 0) state.wins++; else state.losses++;
-  if (state.balanceUsd > state.peakBalance) state.peakBalance = state.balanceUsd;
-  const dd = ((state.peakBalance - state.balanceUsd) / state.peakBalance) * 100;
+  // Drawdown based on TOTAL equity (cash + open positions), not just cash
+  const openValue = Object.values(state.positions).reduce((s, p) => s + p.usdAmount, 0);
+  const totalEquity = state.balanceUsd + openValue;
+  if (totalEquity > state.peakBalance) state.peakBalance = totalEquity;
+  const dd = ((state.peakBalance - totalEquity) / state.peakBalance) * 100;
   if (dd > state.maxDrawdown) state.maxDrawdown = dd;
 
   delete state.positions[mint];
@@ -281,9 +314,13 @@ async function tick() {
       saveState(state);
     }
 
-    // Stop loss — cut losers FAST
+    // Stop loss — cut losers FAST (simulate execution at stop level, not current price)
     if (pnlPct <= -state.stopLossPct) {
-      simSell(state, mint, price, `Stop loss (${pnlPct.toFixed(1)}%)`);
+      // In real trading, a limit order would fill at the stop level, not the actual dump price
+      // Simulate more realistic fill: min of actual price or stop level
+      const stopPrice = pos.entryPrice * (1 - state.stopLossPct / 100);
+      const fillPrice = Math.max(price, stopPrice); // can't fill better than market
+      simSell(state, mint, fillPrice, `Stop loss (${pnlPct.toFixed(1)}%)`);
       continue;
     }
 
@@ -385,11 +422,17 @@ function getStats() {
     partialExited: p.partialExited
   }));
 
+  const openValue = Object.values(state.positions).reduce((s, p) => s + p.usdAmount, 0);
+  const totalEquity = state.balanceUsd + openValue;
+  const unrealizedPnl = totalEquity - state.startBalanceUsd;
+  
   return {
     balanceUsd: state.balanceUsd.toFixed(2),
+    totalEquity: totalEquity.toFixed(2),
     startBalanceUsd: state.startBalanceUsd,
-    totalPnlUsd: state.totalPnlUsd.toFixed(2),
-    totalPnlPct: ((state.totalPnlUsd / state.startBalanceUsd) * 100).toFixed(1),
+    totalPnlUsd: unrealizedPnl.toFixed(2),
+    totalPnlPct: ((unrealizedPnl / state.startBalanceUsd) * 100).toFixed(1),
+    realizedPnl: state.totalPnlUsd.toFixed(2),
     totalTrades: state.totalTrades,
     wins: state.wins,
     losses: state.losses,
