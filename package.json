@@ -1,0 +1,20 @@
+{
+  "name": "autobags",
+  "version": "0.1.0",
+  "description": "AI-powered Solana trading agent on Bags.fm",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "node src/index.js",
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "@solana/web3.js": "^1.95.3",
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "node-fetch": "^2.7.0",
+    "axios": "^1.6.0"
+  },
+  "keywords": ["solana", "trading", "bags", "defi", "ai-agent"],
+  "license": "MIT"
+}
