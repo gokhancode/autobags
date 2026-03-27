@@ -4,6 +4,7 @@ const cors    = require('cors');
 const path    = require('path');
 const app     = express();
 
+app.disable('x-powered-by');
 app.use(cors());
 app.use(express.json());
 
