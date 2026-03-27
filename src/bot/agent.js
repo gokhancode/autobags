@@ -38,8 +38,8 @@ class AutobagsAgent {
   constructor() {
     this.bags = new BagsClient(process.env.BAGS_API_KEY, process.env.SOLANA_RPC_URL);
     this.partnerKey = process.env.BAGS_PARTNER_KEY;
-    this.operatorWallet = process.env.OPERATOR_WALLET_PUBLIC_KEY;
     this.running = false;
+    // No operator wallet — each user has their own wallet via WalletManager
   }
 
   async tick() {
@@ -93,9 +93,10 @@ class AutobagsAgent {
 
   async executeBuy({ mint, symbol, quote, solAmount }) {
     try {
+      const userPubkey = WalletManager.getPublicKey(userId);
       const swapTx = await this.bags.createSwapTransaction({
         quoteResponse: quote.response,
-        walletPublicKey: this.operatorWallet,
+        walletPublicKey: userPubkey,
         partnerKey: this.partnerKey
       });
 
