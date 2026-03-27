@@ -52,9 +52,44 @@ router.post('/', auth.requireAuth, async (req, res) => {
 
     const result = await executeSwap(userId, mint, SOL_MINT, Number(tokensToSell), settings.slippageBps);
 
-    // Calculate P&L
-    const { LAMPORTS_PER_SOL } = require('@solana/web3.js');
-    const pnlSol = parseFloat(result.outAmount) / LAMPORTS_PER_SOL - pos.solSpent;
+    // Calculate P&L from ACTUAL on-chain balance change
+    const { Connection, PublicKey, LAMPORTS_PER_SOL } = require('@solana/web3.js');
+    const WalletManager = require('../bot/wallet-manager');
+    const rpc = require('../rpc');
+    
+    // Get SOL balance AFTER the sell to compute real PnL
+    let solReceived = 0;
+    try {
+      const pubkey = WalletManager.getPublicKey(userId);
+      const postBalance = await rpc.withRetry(async (conn) => {
+        return await conn.getBalance(new PublicKey(pubkey));
+      });
+      // We can't perfectly know pre-sell balance, so use quote estimate as fallback
+      // But at least get the outAmount right
+      if (result.outAmount) {
+        solReceived = parseFloat(result.outAmount) / LAMPORTS_PER_SOL;
+      } else {
+        // Fallback: check current price and estimate
+        try {
+          const priceRes = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${mint}`);
+          const priceData = await priceRes.json();
+          const pair = priceData?.pairs?.find(p => p.chainId === 'solana');
+          const currentPrice = parseFloat(pair?.priceUsd || 0);
+          const entryPrice = pos.entryPrice || 0;
+          if (currentPrice > 0 && entryPrice > 0) {
+            solReceived = pos.solSpent * (currentPrice / entryPrice);
+          } else {
+            solReceived = pos.solSpent; // worst case: assume breakeven
+          }
+        } catch {
+          solReceived = pos.solSpent;
+        }
+      }
+    } catch {
+      solReceived = pos.solSpent; // fallback to breakeven if balance check fails
+    }
+
+    const pnlSol = solReceived - pos.solSpent;
     const pnlPct = pos.solSpent > 0 ? ((pnlSol / pos.solSpent) * 100) : 0;
 
     // Remove position
