@@ -37,12 +37,12 @@ class BagsClient {
     return this.get(`/token-launch/feed?limit=${limit}`);
   }
 
-  async getBagsPools() {
-    return this.get('/bags/pools');
+  async getBagsPools(onlyMigrated = false) {
+    return this.get(`/solana/bags/pools?onlyMigrated=${onlyMigrated}`);
   }
 
   async getPoolByMint(mint) {
-    return this.get(`/bags/pools/${mint}`);
+    return this.get(`/solana/bags/pools/${mint}`);
   }
 
   // ─── Trading ───────────────────────────────────────────────────────────────
