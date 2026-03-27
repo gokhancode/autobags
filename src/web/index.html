@@ -552,15 +552,20 @@
     // Scroll to dashboard
     document.getElementById('dashboard').scrollIntoView({ behavior: 'smooth' });
 
-    // Load portfolio
+    // Load portfolio + live balance
     try {
       const res  = await fetch(`${API}/api/portfolio/${currentUser.userId}`);
       const data = await res.json();
-      document.getElementById('d-pnl').textContent    = data.totalPnlSol + ' SOL';
-      document.getElementById('d-pnl').className      = 'card-value ' + (parseFloat(data.totalPnlSol) >= 0 ? 'green' : 'red');
-      document.getElementById('d-trades').textContent = data.totalTrades;
-      document.getElementById('d-winrate').textContent = data.winRate;
-    } catch {}
+      document.getElementById('d-balance').textContent  = data.balanceSol != null ? data.balanceSol + ' SOL' : '—';
+      document.getElementById('d-pnl').textContent      = data.totalPnlSol + ' SOL';
+      document.getElementById('d-pnl').className        = 'card-value ' + (parseFloat(data.totalPnlSol) >= 0 ? 'green' : 'red');
+      document.getElementById('d-trades').textContent   = data.totalTrades;
+      document.getElementById('d-winrate').textContent  = data.winRate || '—';
+      // Also set deposit address from portfolio if not already set
+      if (data.walletPublicKey) {
+        document.getElementById('d-address').textContent = data.walletPublicKey;
+      }
+    } catch (e) { console.warn('Portfolio load failed:', e); }
 
     // Load trades
     try {
