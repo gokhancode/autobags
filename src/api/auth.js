@@ -202,4 +202,5 @@ router.get('/me', requireAuth, (req, res) => {
   });
 });
 
+router.requireAuth = requireAuth;
 module.exports = router;

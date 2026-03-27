@@ -147,6 +147,37 @@
     .pill.buy  { background: rgba(34,197,94,0.15); color: var(--green); }
     .pill.sell { background: rgba(239,68,68,0.15);  color: var(--red); }
 
+    /* ── SETTINGS ── */
+    .settings-box { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 24px; margin-bottom: 24px; }
+    .settings-box h3 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+    .settings-box p  { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+    .mode-tabs { display: flex; gap: 8px; margin-bottom: 24px; }
+    .mode-tab { flex: 1; padding: 10px; border-radius: 10px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-weight: 700; font-size: 14px; cursor: pointer; transition: all .2s; text-align: center; }
+    .mode-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid var(--border); }
+    .toggle-row:last-child { border-bottom: none; }
+    .toggle-row label { font-size: 14px; font-weight: 600; }
+    .toggle-row small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+    .toggle { position: relative; width: 44px; height: 24px; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .slider-toggle { position: absolute; inset: 0; background: var(--border); border-radius: 99px; cursor: pointer; transition: .3s; }
+    .slider-toggle:before { content: ''; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px; background: white; border-radius: 50%; transition: .3s; }
+    .toggle input:checked + .slider-toggle { background: var(--green); }
+    .toggle input:checked + .slider-toggle:before { transform: translateX(20px); }
+    .risk-group { display: flex; gap: 8px; margin-top: 8px; }
+    .risk-btn { flex: 1; padding: 8px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-size: 13px; font-weight: 600; cursor: pointer; transition: all .2s; }
+    .risk-btn.active.low    { background: rgba(34,197,94,0.15);  color: var(--green); border-color: var(--green); }
+    .risk-btn.active.medium { background: rgba(234,179,8,0.15);  color: #eab308;      border-color: #eab308; }
+    .risk-btn.active.high   { background: rgba(239,68,68,0.15);  color: var(--red);   border-color: var(--red); }
+    .range-row { margin: 12px 0; }
+    .range-row label { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+    .range-row label span { color: var(--accent2); font-family: var(--mono); }
+    input[type=range] { width: 100%; accent-color: var(--accent); }
+    .adv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media(max-width:500px) { .adv-grid { grid-template-columns: 1fr; } }
+    .save-btn { width: 100%; margin-top: 20px; }
+    .saved-msg { text-align: center; color: var(--green); font-size: 13px; margin-top: 8px; display: none; }
+
     /* ── TICKER ── */
     .ticker-wrap { overflow: hidden; background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 10px 0; }
     .ticker-track { display: flex; gap: 0; white-space: nowrap; animation: ticker 30s linear infinite; }
@@ -366,6 +397,89 @@
     </div>
   </div>
 
+  <!-- Bot Settings -->
+  <div class="settings-box">
+    <h3>⚙️ Bot settings</h3>
+    <p>Configure how the AI agent trades on your behalf.</p>
+
+    <!-- Bot on/off -->
+    <div class="toggle-row">
+      <div>
+        <label>Bot active</label>
+        <small>Agent is actively scouting and trading</small>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="s-active" onchange="saveSetting('active', this.checked)" />
+        <span class="slider-toggle"></span>
+      </label>
+    </div>
+
+    <!-- Mode tabs -->
+    <div style="margin-top:20px; margin-bottom:8px; font-size:13px; font-weight:600; color:var(--muted);">MODE</div>
+    <div class="mode-tabs">
+      <button class="mode-tab active" id="tab-basic" onclick="switchMode('basic')">🟢 Basic</button>
+      <button class="mode-tab" id="tab-advanced" onclick="switchMode('advanced')">⚡ Advanced</button>
+    </div>
+
+    <!-- Basic mode -->
+    <div id="mode-basic">
+      <div style="font-size:14px; color:var(--muted); margin-bottom:16px;">Set your risk appetite. The bot handles everything else automatically.</div>
+      <div style="font-size:13px; font-weight:600; margin-bottom:8px;">Risk level</div>
+      <div class="risk-group">
+        <button class="risk-btn low"    id="risk-low"    onclick="setRisk('low')">🟢 Low<br/><small style="font-weight:400">-5% SL / +15% TP</small></button>
+        <button class="risk-btn medium" id="risk-medium" onclick="setRisk('medium')">🟡 Medium<br/><small style="font-weight:400">-8% SL / +25% TP</small></button>
+        <button class="risk-btn high"   id="risk-high"   onclick="setRisk('high')">🔴 High<br/><small style="font-weight:400">-12% SL / +40% TP</small></button>
+      </div>
+    </div>
+
+    <!-- Advanced mode -->
+    <div id="mode-advanced" style="display:none;">
+      <div class="adv-grid">
+        <div>
+          <div class="range-row">
+            <label>Stop loss <span id="v-sl">8</span>%</label>
+            <input type="range" id="s-sl" min="1" max="50" value="8" oninput="document.getElementById('v-sl').textContent=this.value" />
+          </div>
+          <div class="range-row">
+            <label>Take profit <span id="v-tp">25</span>%</label>
+            <input type="range" id="s-tp" min="5" max="200" value="25" oninput="document.getElementById('v-tp').textContent=this.value" />
+          </div>
+          <div class="range-row">
+            <label>Partial exit at <span id="v-pe">10</span>%</label>
+            <input type="range" id="s-pe" min="5" max="50" value="10" oninput="document.getElementById('v-pe').textContent=this.value" />
+            <small style="color:var(--muted); font-size:11px;">Secure 30% of position at this gain</small>
+          </div>
+        </div>
+        <div>
+          <div class="range-row">
+            <label>Max deploy <span id="v-sol">80</span>% of balance</label>
+            <input type="range" id="s-sol" min="10" max="100" value="80" oninput="document.getElementById('v-sol').textContent=this.value" />
+          </div>
+          <div class="range-row">
+            <label>Min intel score <span id="v-score">65</span>/100</label>
+            <input type="range" id="s-score" min="0" max="100" value="65" oninput="document.getElementById('v-score').textContent=this.value" />
+            <small style="color:var(--muted); font-size:11px;">Higher = safer picks, fewer trades</small>
+          </div>
+          <div class="range-row">
+            <label>Slippage <span id="v-slip">100</span> bps</label>
+            <input type="range" id="s-slip" min="10" max="1000" step="10" value="100" oninput="document.getElementById('v-slip').textContent=this.value" />
+          </div>
+        </div>
+      </div>
+      <div class="toggle-row" style="margin-top:4px;">
+        <div><label>Max positions</label><small>Simultaneous open trades</small></div>
+        <select id="s-maxpos" style="background:var(--bg); border:1px solid var(--border); color:var(--text); padding:6px 10px; border-radius:8px;">
+          <option value="1">1 (recommended)</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+        </select>
+      </div>
+    </div>
+
+    <button class="btn btn-primary save-btn" onclick="saveSettings()">Save settings</button>
+    <div class="saved-msg" id="saved-msg">✅ Settings saved</div>
+  </div>
+
   <!-- Export wallet -->
   <div class="deposit-box" id="export-box">
     <h3>🔐 Export private key</h3>
@@ -567,6 +681,9 @@
       }
     } catch (e) { console.warn('Portfolio load failed:', e); }
 
+    // Load settings
+    loadSettings();
+
     // Load trades
     try {
       const res    = await fetch(`${API}/api/trades?limit=10`);
@@ -590,6 +707,82 @@
     currentUser = null; authToken = null;
     document.getElementById('dashboard').style.display = 'none';
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // ── Settings ───────────────────────────────────────────────────────────────
+  let currentSettings = {};
+
+  function switchMode(mode) {
+    currentSettings.mode = mode;
+    document.getElementById('mode-basic').style.display    = mode === 'basic'    ? 'block' : 'none';
+    document.getElementById('mode-advanced').style.display = mode === 'advanced' ? 'block' : 'none';
+    document.getElementById('tab-basic').classList.toggle('active',    mode === 'basic');
+    document.getElementById('tab-advanced').classList.toggle('active', mode === 'advanced');
+  }
+
+  function setRisk(level) {
+    currentSettings.riskLevel = level;
+    ['low','medium','high'].forEach(r => {
+      const btn = document.getElementById('risk-' + r);
+      btn.classList.toggle('active', r === level);
+    });
+  }
+
+  function saveSetting(key, value) {
+    currentSettings[key] = value;
+  }
+
+  async function loadSettings() {
+    if (!authToken) return;
+    try {
+      const res  = await fetch(`${API}/api/settings`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+      const data = await res.json();
+      if (!data.success) return;
+      const s = data.settings;
+      currentSettings = { ...s };
+
+      // Apply to UI
+      document.getElementById('s-active').checked = s.active !== false;
+      switchMode(s.mode || 'basic');
+      setRisk(s.riskLevel || 'medium');
+
+      // Advanced sliders
+      document.getElementById('s-sl').value    = s.stopLossPct    || 8;    document.getElementById('v-sl').textContent    = s.stopLossPct    || 8;
+      document.getElementById('s-tp').value    = s.takeProfitPct  || 25;   document.getElementById('v-tp').textContent    = s.takeProfitPct  || 25;
+      document.getElementById('s-pe').value    = s.partialExitPct || 10;   document.getElementById('v-pe').textContent    = s.partialExitPct || 10;
+      document.getElementById('s-sol').value   = s.maxSolPerTrade || 80;   document.getElementById('v-sol').textContent   = s.maxSolPerTrade || 80;
+      document.getElementById('s-score').value = s.minIntelScore  || 65;   document.getElementById('v-score').textContent = s.minIntelScore  || 65;
+      document.getElementById('s-slip').value  = s.slippageBps    || 100;  document.getElementById('v-slip').textContent  = s.slippageBps    || 100;
+      document.getElementById('s-maxpos').value = String(s.maxPositions || 1);
+    } catch (e) { console.warn('Settings load failed:', e); }
+  }
+
+  async function saveSettings() {
+    if (!authToken) return;
+    const payload = {
+      ...currentSettings,
+      active:         document.getElementById('s-active').checked,
+      stopLossPct:    parseInt(document.getElementById('s-sl').value),
+      takeProfitPct:  parseInt(document.getElementById('s-tp').value),
+      partialExitPct: parseInt(document.getElementById('s-pe').value),
+      maxSolPerTrade: parseInt(document.getElementById('s-sol').value),
+      minIntelScore:  parseInt(document.getElementById('s-score').value),
+      slippageBps:    parseInt(document.getElementById('s-slip').value),
+      maxPositions:   parseInt(document.getElementById('s-maxpos').value),
+    };
+    try {
+      const res = await fetch(`${API}/api/settings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success) {
+        const msg = document.getElementById('saved-msg');
+        msg.style.display = 'block';
+        setTimeout(() => msg.style.display = 'none', 2000);
+      }
+    } catch (e) { console.warn('Save failed:', e); }
   }
 
   function copyAddress() {
