@@ -15,6 +15,7 @@ app.use('/api/subscribers', require('./api/subscribers'));
 app.use('/api/portfolio',   require('./api/portfolio'));
 app.use('/api/trades',      require('./api/trades'));
 app.use('/api/status',      require('./api/status'));
+app.use('/api/stats',       require('./api/stats'));
 
 // Fallback to index.html for SPA
 app.get('*', (req, res) => {

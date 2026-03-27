@@ -147,6 +147,22 @@
     .pill.buy  { background: rgba(34,197,94,0.15); color: var(--green); }
     .pill.sell { background: rgba(239,68,68,0.15);  color: var(--red); }
 
+    /* ── TICKER ── */
+    .ticker-wrap { overflow: hidden; background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 10px 0; }
+    .ticker-track { display: flex; gap: 0; white-space: nowrap; animation: ticker 30s linear infinite; }
+    .ticker-track:hover { animation-play-state: paused; }
+    .ticker-item { display: inline-flex; align-items: center; gap: 8px; padding: 0 28px; font-size: 13px; font-family: var(--mono); border-right: 1px solid var(--border); }
+    .ticker-item .sym { color: var(--accent2); font-weight: 700; }
+    .ticker-item .lbl { color: var(--muted); font-size: 11px; }
+    @keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+    /* ── SOL PRICE BAR ── */
+    .price-bar { display: flex; align-items: center; justify-content: center; gap: 24px; padding: 10px 24px; background: rgba(124,58,237,0.06); font-size: 13px; font-family: var(--mono); flex-wrap: wrap; }
+    .price-bar .item { display: flex; align-items: center; gap: 8px; }
+    .price-bar .val { color: var(--text); font-weight: 700; }
+    .price-bar .change.up { color: var(--green); }
+    .price-bar .change.down { color: var(--red); }
+
     /* ── FOOTER ── */
     footer { text-align: center; padding: 40px 24px; color: var(--muted); font-size: 13px; border-top: 1px solid var(--border); margin-top: 80px; }
     footer a { color: var(--muted); text-decoration: none; }
@@ -180,23 +196,38 @@
   </div>
 </section>
 
+<!-- SOL PRICE BAR -->
+<div class="price-bar" id="price-bar">
+  <div class="item">⚡ <span class="lbl">SOL</span> <span class="val" id="sol-price">loading...</span> <span class="change" id="sol-change"></span></div>
+  <div class="item">🏊 <span class="lbl">Bags pools</span> <span class="val" id="pb-pools">—</span></div>
+  <div class="item">🔥 <span class="lbl">Tokens launched</span> <span class="val" id="pb-launches">—</span></div>
+  <div class="item">🤖 <span class="lbl">AUTOBAGS trades</span> <span class="val" id="pb-trades">—</span></div>
+</div>
+
+<!-- LIVE TOKEN TICKER -->
+<div class="ticker-wrap">
+  <div class="ticker-track" id="ticker-track">
+    <div class="ticker-item"><span class="sym">Loading</span><span class="lbl">live tokens...</span></div>
+  </div>
+</div>
+
 <!-- STATS BAR -->
 <div class="stats-bar">
   <div class="stat">
-    <div class="stat-value" id="stat-pools">1,863</div>
-    <div class="stat-label">Active pools</div>
+    <div class="stat-value" id="stat-pools">—</div>
+    <div class="stat-label">Bags pools live</div>
   </div>
   <div class="stat">
     <div class="stat-value" id="stat-traders">—</div>
-    <div class="stat-label">Active traders</div>
+    <div class="stat-label">Users trading</div>
   </div>
   <div class="stat">
     <div class="stat-value" id="stat-trades">—</div>
     <div class="stat-label">Trades executed</div>
   </div>
   <div class="stat">
-    <div class="stat-value">1.5%</div>
-    <div class="stat-label">Platform fee</div>
+    <div class="stat-value" id="stat-winrate">—</div>
+    <div class="stat-label">Win rate</div>
   </div>
 </div>
 
@@ -403,18 +434,41 @@
     });
   }
 
-  // ── Load stats ─────────────────────────────────────────────────────────────
+  // ── Load live stats ────────────────────────────────────────────────────────
   async function loadStats() {
     try {
-      const res  = await fetch(`${API}/api/subscribers`);
-      const data = await res.json();
-      document.getElementById('stat-traders').textContent = data.count || 0;
-    } catch {}
-    try {
-      const res  = await fetch(`${API}/api/trades`);
-      const data = await res.json();
-      document.getElementById('stat-trades').textContent = data.trades?.length || 0;
-    } catch {}
+      const res  = await fetch(`${API}/api/stats`);
+      const { data } = await res.json();
+
+      // Price bar
+      if (data.solana.price) {
+        document.getElementById('sol-price').textContent = `$${data.solana.price.toFixed(2)}`;
+        const chg = parseFloat(data.solana.change24h);
+        const el  = document.getElementById('sol-change');
+        el.textContent = `${chg >= 0 ? '▲' : '▼'} ${Math.abs(chg)}%`;
+        el.className = `change ${chg >= 0 ? 'up' : 'down'}`;
+      }
+      document.getElementById('pb-pools').textContent    = data.bags.pools.toLocaleString();
+      document.getElementById('pb-launches').textContent = data.bags.recentLaunches.toLocaleString();
+      document.getElementById('pb-trades').textContent   = data.autobags.tradesTotal;
+
+      // Stats bar
+      document.getElementById('stat-pools').textContent   = data.bags.pools.toLocaleString();
+      document.getElementById('stat-traders').textContent = data.autobags.subscribers;
+      document.getElementById('stat-trades').textContent  = data.autobags.tradesTotal;
+      document.getElementById('stat-winrate').textContent = data.autobags.winRate || '—';
+
+      // Ticker — duplicate for seamless loop
+      const tokens = data.bags.recentTokens;
+      if (tokens && tokens.length) {
+        const makeItem = t => `<div class="ticker-item"><span class="sym">$${t.symbol}</span><span class="lbl">${t.name?.slice(0,18) || ''}</span></div>`;
+        const html = tokens.map(makeItem).join('');
+        const track = document.getElementById('ticker-track');
+        track.innerHTML = html + html; // duplicate for seamless scroll
+      }
+    } catch (e) {
+      console.warn('Stats load failed:', e);
+    }
   }
 
   // ── Auto-restore session ───────────────────────────────────────────────────
