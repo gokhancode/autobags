@@ -1,16 +1,14 @@
 /**
  * AUTOBAGS — Bags.fm API client
- * Wraps the official Bags SDK for trading + fee sharing
+ * All paths verified against docs.bags.fm OpenAPI specs
  */
-const { Connection, PublicKey, Keypair } = require('@solana/web3.js');
-const bs58 = require('bs58');
 
 const BAGS_API_BASE = 'https://public-api-v2.bags.fm/api/v1';
 
 class BagsClient {
   constructor(apiKey, rpcUrl) {
     this.apiKey = apiKey;
-    this.connection = new Connection(rpcUrl || process.env.SOLANA_RPC_URL, 'processed');
+    this.rpcUrl = rpcUrl;
     this.headers = {
       'x-api-key': apiKey,
       'Content-Type': 'application/json'
@@ -19,6 +17,7 @@ class BagsClient {
 
   async get(path) {
     const res = await fetch(`${BAGS_API_BASE}${path}`, { headers: this.headers });
+    if (!res.ok) throw new Error(`Bags API ${res.status}: ${path}`);
     return res.json();
   }
 
@@ -28,73 +27,72 @@ class BagsClient {
       headers: this.headers,
       body: JSON.stringify(body)
     });
+    if (!res.ok) throw new Error(`Bags API ${res.status}: ${path}`);
     return res.json();
   }
 
   // ─── Token Discovery ───────────────────────────────────────────────────────
 
+  /** GET /token-launch/feed */
   async getTokenFeed(limit = 20) {
     return this.get(`/token-launch/feed?limit=${limit}`);
   }
 
+  /** GET /solana/bags/pools */
   async getBagsPools(onlyMigrated = false) {
     return this.get(`/solana/bags/pools?onlyMigrated=${onlyMigrated}`);
   }
 
+  /** GET /solana/bags/pools/:mint */
   async getPoolByMint(mint) {
     return this.get(`/solana/bags/pools/${mint}`);
   }
 
   // ─── Trading ───────────────────────────────────────────────────────────────
 
-  async getTradeQuote({ inputMint, outputMint, amount, slippage = 0.5 }) {
-    return this.post('/trade/quote', {
-      inputMint,
-      outputMint,
-      amount,
-      slippageBps: Math.round(slippage * 100)
-    });
+  /**
+   * GET /trade/quote
+   * amount = lamports (e.g. 0.1 SOL = 100_000_000)
+   */
+  async getTradeQuote({ inputMint, outputMint, amount, slippageBps = 100, slippageMode = 'manual' }) {
+    const params = new URLSearchParams({ inputMint, outputMint, amount, slippageBps, slippageMode });
+    return this.get(`/trade/quote?${params}`);
   }
 
+  /** POST /trade/swap */
   async createSwapTransaction({ quoteResponse, walletPublicKey, partnerKey }) {
     return this.post('/trade/swap', {
       quoteResponse,
       userPublicKey: walletPublicKey,
-      ...(partnerKey && { partnerKey }) // inject our fee-sharing partner key
+      ...(partnerKey && { partnerKey })
     });
   }
 
+  /** POST /transaction/send */
   async sendTransaction(serializedTx) {
-    return this.post('/transaction/send', {
-      transaction: serializedTx
-    });
+    return this.post('/transaction/send', { transaction: serializedTx });
   }
 
-  // ─── Fee Sharing ───────────────────────────────────────────────────────────
+  // ─── Fee Sharing / Partner ─────────────────────────────────────────────────
 
-  async createPartnerConfig(walletPublicKey) {
-    return this.post('/partner/config', {
-      walletPublicKey
-    });
+  /** GET /fee-share/partner-config/stats?partner=<pubkey> */
+  async getPartnerStats(partnerWallet) {
+    return this.get(`/fee-share/partner-config/stats?partner=${partnerWallet}`);
   }
 
-  async getPartnerStats(partnerKey) {
-    return this.get(`/partner/stats?partnerKey=${partnerKey}`);
+  /** POST /fee-share/partner-config/claim */
+  async claimPartnerFees(partnerWallet) {
+    return this.post('/fee-share/partner-config/claim', { partner: partnerWallet });
   }
 
-  async claimPartnerFees(partnerKey, walletPublicKey) {
-    return this.post('/partner/claim', {
-      partnerKey,
-      walletPublicKey
-    });
-  }
+  // ─── Analytics ────────────────────────────────────────────────────────────
 
-  // ─── Token Lifetime Stats ──────────────────────────────────────────────────
-
+  /** GET /token/fees?mint=<mint> */
   async getTokenLifetimeFees(mint) {
     return this.get(`/token/fees?mint=${mint}`);
   }
 
+  /** GET /token/creators?mint=<mint> */
   async getTokenCreators(mint) {
     return this.get(`/token/creators?mint=${mint}`);
   }
