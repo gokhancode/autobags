@@ -13,6 +13,7 @@ app.use(express.static(path.join(__dirname, 'web')));
 
 // API routes — both prefixed and non-prefixed
 ['', '/autobags'].forEach(prefix => {
+  app.use(`${prefix}/api/auth`,        require('./api/auth'));
   app.use(`${prefix}/api/subscribers`, require('./api/subscribers'));
   app.use(`${prefix}/api/portfolio`,   require('./api/portfolio'));
   app.use(`${prefix}/api/trades`,      require('./api/trades'));
