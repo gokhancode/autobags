@@ -261,6 +261,29 @@ async function run() {
     console.log(`[TUNER] Tournament check skipped: ${e.message}`);
   }
 
+  // ── Quant brain report ─────────────────────────────────────────────
+  try {
+    const quant = require('./quant-engine');
+    const qr = quant.getReport();
+    console.log(`[TUNER] 🧠 Quant Brain: ${qr.totalTrades} trades analyzed`);
+    console.log(`  Sharpe: ${qr.sharpeRatio} | Kelly: ${qr.kelly.optimalBet} bet size | Regime: ${qr.regime} (avg vol ${qr.regimeAvgVol}%)`);
+    if (qr.topSignals.length) {
+      console.log(`  Top signals:`);
+      qr.topSignals.slice(0, 5).forEach(s => 
+        console.log(`    ${s.signal}: weight ${s.weight}, WR ${s.winRate}%, edge ${s.edge}% (${s.occurrences} trades)`)
+      );
+    }
+    if (qr.worstSignals.length) {
+      console.log(`  Worst signals:`);
+      qr.worstSignals.forEach(s => 
+        console.log(`    ${s.signal}: weight ${s.weight}, WR ${s.winRate}%, edge ${s.edge}% (${s.occurrences} trades)`)
+      );
+    }
+    report.quant = qr;
+  } catch (e) {
+    console.log(`[TUNER] Quant check skipped: ${e.message}`);
+  }
+
   console.log(`[TUNER] === Complete ===`);
 }
 

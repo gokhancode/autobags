@@ -31,6 +31,7 @@ app.use(express.static(path.join(__dirname, 'web')));
   app.use(`${prefix}/api/narratives`,  require('./api/narratives'));
   app.use(`${prefix}/api/sim`,         require('./api/sim'));
   app.use(`${prefix}/api/tournament`,  require('./api/tournament'));
+  app.use(`${prefix}/api/quant`,       require('./api/quant'));
 });
 
 // Global error handler

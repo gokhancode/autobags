@@ -15,6 +15,7 @@
 
 const fs   = require('fs');
 const path = require('path');
+const quant = require('./quant-engine');
 const STRATS_FILE = path.join(__dirname, '../../data/sim-strategies.json');
 const STRATS_LOG  = path.join(__dirname, '../../data/sim-strategies-log.json');
 
@@ -252,10 +253,13 @@ function stratBuy(state, stratKey, mint, symbol, price, score) {
   const posSize = Math.min(s.balanceUsd * 0.8, s.balanceUsd); // go big per strategy
   if (posSize < 5) return null;
 
+  // Detect signals at entry for learning
+  const entrySignals = s._lastSignals || [];
+  
   s.positions[mint] = {
     symbol, entryPrice: price, usdAmount: posSize,
     tokens: posSize / price, entryTime: new Date().toISOString(),
-    score, highPrice: price
+    score, highPrice: price, entrySignals
   };
   s.balanceUsd -= posSize;
   s.totalTrades++;
@@ -282,6 +286,12 @@ function stratSell(state, stratKey, mint, price, reason) {
   if (dd > s.maxDrawdown) s.maxDrawdown = dd;
 
   const holdMin = Math.round((Date.now() - new Date(pos.entryTime).getTime()) / 60000);
+
+  // Feed outcome to quant engine
+  try {
+    quant.recordOutcome(pos.entrySignals || [], pnlPct);
+  } catch {}
+
   delete s.positions[mint];
 
   const emoji = pnl >= 0 ? '🟢' : '🔴';
@@ -365,19 +375,23 @@ async function tournamentTick() {
     if (now - s.lastTradeTime < 20000) continue;
     if (s.balanceUsd < 10) continue;
 
-    // Score all candidates with this strategy
+    // Score all candidates: strategy score + quant Bayesian score (blended)
     let best = null;
     let bestScore = 0;
     for (const [mint, d] of Object.entries(tokenData)) {
       if (d.liq < 2000) continue;
-      const score = stratDef.score(d);
-      if (score >= s.params.minScore && score > bestScore) {
-        best = { mint, ...d, score };
-        bestScore = score;
+      const stratScore = stratDef.score(d);
+      const { score: quantScore, signals } = quant.bayesianScore(d);
+      // Blend: 60% strategy + 40% quant
+      const blended = Math.round(stratScore * 0.6 + quantScore * 0.4);
+      if (blended >= s.params.minScore && blended > bestScore) {
+        best = { mint, ...d, score: blended, signals };
+        bestScore = blended;
       }
     }
 
     if (best && best.price > 0) {
+      s._lastSignals = best.signals || [];
       const t = stratBuy(state, stratKey, best.mint, best.symbol, best.price, best.score);
       if (t) tradeLog.push(t);
     }
