@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AUTOBAGS — Your bags, on autopilot</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0a0a0f;
+      --surface:  #12121a;
+      --border:   #1e1e2e;
+      --accent:   #7c3aed;
+      --accent2:  #a855f7;
+      --green:    #22c55e;
+      --red:      #ef4444;
+      --text:     #f1f1f5;
+      --muted:    #6b7280;
+      --mono:     'Space Mono', monospace;
+    }
+
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
+
+    /* ── NAV ── */
+    nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 48px; border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; background: rgba(10,10,15,0.9);
+      backdrop-filter: blur(12px); z-index: 100;
+    }
+    .logo { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; }
+    .logo span { color: var(--accent2); }
+    nav a { color: var(--muted); text-decoration: none; font-size: 14px; margin-left: 24px; transition: color .2s; }
+    nav a:hover { color: var(--text); }
+
+    /* ── HERO ── */
+    .hero {
+      text-align: center; padding: 100px 24px 80px;
+      background: radial-gradient(ellipse 60% 40% at 50% 0%, rgba(124,58,237,0.15) 0%, transparent 70%);
+    }
+    .badge {
+      display: inline-block; padding: 6px 14px; border-radius: 99px;
+      background: rgba(124,58,237,0.15); border: 1px solid rgba(124,58,237,0.3);
+      font-size: 12px; font-weight: 600; color: var(--accent2); margin-bottom: 24px;
+      letter-spacing: 0.5px; text-transform: uppercase;
+    }
+    h1 { font-size: clamp(36px, 6vw, 72px); font-weight: 800; line-height: 1.1; letter-spacing: -2px; margin-bottom: 20px; }
+    h1 em { font-style: normal; background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .subtitle { font-size: 18px; color: var(--muted); max-width: 480px; margin: 0 auto 40px; line-height: 1.6; }
+
+    .cta-group { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .btn {
+      padding: 14px 28px; border-radius: 10px; font-size: 15px; font-weight: 600;
+      cursor: pointer; border: none; transition: all .2s; text-decoration: none; display: inline-block;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: var(--accent2); transform: translateY(-1px); box-shadow: 0 8px 24px rgba(124,58,237,0.3); }
+    .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
+    .btn-outline:hover { border-color: var(--accent); color: var(--accent2); }
+
+    /* ── STATS BAR ── */
+    .stats-bar {
+      display: flex; justify-content: center; gap: 48px; padding: 32px 24px;
+      border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+    .stat { text-align: center; }
+    .stat-value { font-size: 28px; font-weight: 800; color: var(--green); font-family: var(--mono); }
+    .stat-label { font-size: 12px; color: var(--muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    /* ── HOW IT WORKS ── */
+    .section { padding: 80px 24px; max-width: 1100px; margin: 0 auto; }
+    .section-title { font-size: 32px; font-weight: 800; text-align: center; margin-bottom: 12px; letter-spacing: -1px; }
+    .section-sub { text-align: center; color: var(--muted); margin-bottom: 56px; }
+    .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 24px; }
+    .step {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+      padding: 28px; transition: border-color .2s;
+    }
+    .step:hover { border-color: var(--accent); }
+    .step-num { font-size: 13px; font-weight: 700; color: var(--accent2); font-family: var(--mono); margin-bottom: 12px; }
+    .step h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+    .step p { font-size: 14px; color: var(--muted); line-height: 1.6; }
+
+    /* ── SIGN UP MODAL ── */
+    .overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(4px); z-index: 200; align-items: center; justify-content: center;
+    }
+    .overlay.active { display: flex; }
+    .modal {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
+      padding: 40px; width: 100%; max-width: 440px; position: relative;
+    }
+    .modal-close {
+      position: absolute; top: 16px; right: 16px; background: none; border: none;
+      color: var(--muted); font-size: 22px; cursor: pointer; line-height: 1;
+    }
+    .modal h2 { font-size: 24px; font-weight: 800; margin-bottom: 8px; }
+    .modal p { color: var(--muted); font-size: 14px; margin-bottom: 28px; }
+    .form-group { margin-bottom: 16px; }
+    label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--muted); }
+    input {
+      width: 100%; padding: 12px 14px; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 10px; color: var(--text); font-size: 14px; outline: none; transition: border-color .2s;
+    }
+    input:focus { border-color: var(--accent); }
+    .modal .btn { width: 100%; margin-top: 8px; text-align: center; }
+
+    /* ── DASHBOARD ── */
+    #dashboard { display: none; max-width: 800px; margin: 48px auto; padding: 0 24px; }
+    .dash-header { margin-bottom: 32px; }
+    .dash-header h2 { font-size: 26px; font-weight: 800; }
+    .dash-header p { color: var(--muted); font-size: 14px; margin-top: 4px; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 24px; }
+    .card-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .card-value { font-size: 24px; font-weight: 800; font-family: var(--mono); }
+    .card-value.green { color: var(--green); }
+    .card-value.red   { color: var(--red); }
+
+    .deposit-box {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 24px; margin-bottom: 24px;
+    }
+    .deposit-box h3 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+    .deposit-box p  { font-size: 13px; color: var(--muted); margin-bottom: 16px; }
+    .address-row { display: flex; gap: 10px; align-items: center; }
+    .address {
+      flex: 1; padding: 10px 14px; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 8px; font-family: var(--mono); font-size: 12px; color: var(--accent2);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .copy-btn {
+      padding: 10px 16px; background: var(--accent); border: none; border-radius: 8px;
+      color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+    }
+    .copy-btn:hover { background: var(--accent2); }
+
+    .trades-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .trades-table th { text-align: left; padding: 10px 12px; color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--border); }
+    .trades-table td { padding: 12px; border-bottom: 1px solid rgba(30,30,46,0.5); }
+    .trades-table tr:last-child td { border-bottom: none; }
+    .pill { padding: 3px 10px; border-radius: 99px; font-size: 11px; font-weight: 700; }
+    .pill.buy  { background: rgba(34,197,94,0.15); color: var(--green); }
+    .pill.sell { background: rgba(239,68,68,0.15);  color: var(--red); }
+
+    /* ── FOOTER ── */
+    footer { text-align: center; padding: 40px 24px; color: var(--muted); font-size: 13px; border-top: 1px solid var(--border); margin-top: 80px; }
+    footer a { color: var(--muted); text-decoration: none; }
+    footer a:hover { color: var(--accent2); }
+
+    @media (max-width: 600px) {
+      nav { padding: 16px 20px; }
+      .stats-bar { gap: 24px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="logo">AUTO<span>BAGS</span></div>
+  <div>
+    <a href="#how-it-works">How it works</a>
+    <a href="#" onclick="openModal(); return false;" style="color:var(--accent2); font-weight:600;">Get started →</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="badge">🤖 Built on Bags.fm · Solana</div>
+  <h1>Your bags,<br/><em>on autopilot.</em></h1>
+  <p class="subtitle">An AI trading agent that scouts, scores, and swaps Solana memecoins for you — 24/7. Your wallet, your keys, your gains.</p>
+  <div class="cta-group">
+    <a href="#" class="btn btn-primary" onclick="openModal(); return false;">Start trading free</a>
+    <a href="#how-it-works" class="btn btn-outline">How it works</a>
+  </div>
+</section>
+
+<!-- STATS BAR -->
+<div class="stats-bar">
+  <div class="stat">
+    <div class="stat-value" id="stat-pools">1,863</div>
+    <div class="stat-label">Active pools</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value" id="stat-traders">—</div>
+    <div class="stat-label">Active traders</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value" id="stat-trades">—</div>
+    <div class="stat-label">Trades executed</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value">1.5%</div>
+    <div class="stat-label">Platform fee</div>
+  </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<section class="section" id="how-it-works">
+  <div class="section-title">How AUTOBAGS works</div>
+  <div class="section-sub">Four steps from zero to automated trading</div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">01 /</div>
+      <h3>Sign up</h3>
+      <p>Create an account. A secure Solana wallet is generated just for you — encrypted and stored on our servers.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">02 /</div>
+      <h3>Deposit SOL</h3>
+      <p>Send SOL to your deposit address. That's your trading capital. Start with any amount.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">03 /</div>
+      <h3>AI scouts tokens</h3>
+      <p>Our agent scans trending tokens every minute — filtering by safety score, liquidity, volume, and momentum.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">04 /</div>
+      <h3>Collect bags</h3>
+      <p>The bot buys, manages positions, and exits at profit targets. You watch your balance grow.</p>
+    </div>
+  </div>
+</section>
+
+<!-- SIGN UP MODAL -->
+<div class="overlay" id="modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">×</button>
+    <h2>Get started</h2>
+    <p>Create your account. Takes 10 seconds.</p>
+    <div id="signup-form">
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="inp-userid" placeholder="satoshi42" autocomplete="off" />
+      </div>
+      <div class="form-group">
+        <label>Email (optional)</label>
+        <input type="email" id="inp-email" placeholder="you@example.com" />
+      </div>
+      <button class="btn btn-primary" onclick="signup()">Create account →</button>
+    </div>
+    <div id="signup-success" style="display:none; text-align:center;">
+      <div style="font-size:48px; margin-bottom:16px;">✅</div>
+      <h3 style="margin-bottom:8px;">Wallet created!</h3>
+      <p style="color:var(--muted); font-size:13px; margin-bottom:20px;">Send SOL to start trading</p>
+      <div class="address" id="modal-address" style="margin-bottom:16px;"></div>
+      <button class="btn btn-primary" onclick="closeModal(); showDashboard()">View dashboard →</button>
+    </div>
+  </div>
+</div>
+
+<!-- DASHBOARD (shown after login) -->
+<div id="dashboard">
+  <div class="dash-header">
+    <h2>Dashboard</h2>
+    <p id="dash-userid" style="font-family:var(--mono); color:var(--accent2);"></p>
+  </div>
+
+  <div class="cards">
+    <div class="card">
+      <div class="card-label">Balance (SOL)</div>
+      <div class="card-value" id="d-balance">—</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Total P&L</div>
+      <div class="card-value" id="d-pnl">—</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Total trades</div>
+      <div class="card-value" id="d-trades">—</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Win rate</div>
+      <div class="card-value" id="d-winrate">—</div>
+    </div>
+  </div>
+
+  <div class="deposit-box">
+    <h3>Your deposit address</h3>
+    <p>Send SOL here to fund your trading account. Funds are reflected within ~30 seconds.</p>
+    <div class="address-row">
+      <div class="address" id="d-address"></div>
+      <button class="copy-btn" onclick="copyAddress()">Copy</button>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:24px;">
+    <div class="card-label" style="margin-bottom:16px;">Recent trades</div>
+    <table class="trades-table">
+      <thead>
+        <tr>
+          <th>Token</th>
+          <th>Type</th>
+          <th>Amount</th>
+          <th>P&L</th>
+          <th>Time</th>
+        </tr>
+      </thead>
+      <tbody id="trades-body">
+        <tr><td colspan="5" style="color:var(--muted); padding:24px; text-align:center;">No trades yet</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <p>AUTOBAGS · Built on <a href="https://bags.fm" target="_blank">Bags.fm</a> · Solana</p>
+  <p style="margin-top:8px;">Trading involves risk. Past performance does not guarantee future results.</p>
+</footer>
+
+<script>
+  const API = window.location.origin;
+  let currentUser = null;
+
+  // ── Modal ──────────────────────────────────────────────────────────────────
+  function openModal()  { document.getElementById('modal').classList.add('active'); }
+  function closeModal() { document.getElementById('modal').classList.remove('active'); }
+  document.getElementById('modal').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+
+  // ── Sign up ────────────────────────────────────────────────────────────────
+  async function signup() {
+    const userId = document.getElementById('inp-userid').value.trim();
+    const email  = document.getElementById('inp-email').value.trim();
+    if (!userId) { alert('Enter a username'); return; }
+
+    const btn = document.querySelector('#signup-form .btn');
+    btn.textContent = 'Creating...';
+    btn.disabled = true;
+
+    try {
+      const res  = await fetch(`${API}/api/subscribers`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, email })
+      });
+      const data = await res.json();
+
+      if (!res.ok) { alert(data.error || 'Something went wrong'); btn.textContent = 'Create account →'; btn.disabled = false; return; }
+
+      currentUser = { userId, wallet: data.wallet.publicKey };
+      localStorage.setItem('autobags_user', JSON.stringify(currentUser));
+
+      document.getElementById('modal-address').textContent = data.wallet.publicKey;
+      document.getElementById('signup-form').style.display = 'none';
+      document.getElementById('signup-success').style.display = 'block';
+    } catch (err) {
+      alert('Network error. Try again.');
+      btn.textContent = 'Create account →'; btn.disabled = false;
+    }
+  }
+
+  // ── Dashboard ──────────────────────────────────────────────────────────────
+  async function showDashboard() {
+    if (!currentUser) return;
+    document.getElementById('dashboard').style.display = 'block';
+    document.getElementById('dash-userid').textContent = `@${currentUser.userId}`;
+    document.getElementById('d-address').textContent = currentUser.wallet;
+
+    // Scroll to dashboard
+    document.getElementById('dashboard').scrollIntoView({ behavior: 'smooth' });
+
+    // Load portfolio
+    try {
+      const res  = await fetch(`${API}/api/portfolio/${currentUser.userId}`);
+      const data = await res.json();
+      document.getElementById('d-pnl').textContent    = data.totalPnlSol + ' SOL';
+      document.getElementById('d-pnl').className      = 'card-value ' + (parseFloat(data.totalPnlSol) >= 0 ? 'green' : 'red');
+      document.getElementById('d-trades').textContent = data.totalTrades;
+      document.getElementById('d-winrate').textContent = data.winRate;
+    } catch {}
+
+    // Load trades
+    try {
+      const res    = await fetch(`${API}/api/trades?limit=10`);
+      const data   = await res.json();
+      const tbody  = document.getElementById('trades-body');
+      if (data.trades && data.trades.length) {
+        tbody.innerHTML = data.trades.map(t => `
+          <tr>
+            <td style="font-family:var(--mono); color:var(--accent2);">${t.symbol || '—'}</td>
+            <td><span class="pill ${t.type === 'BUY' ? 'buy' : 'sell'}">${t.type}</span></td>
+            <td>${t.solAmount || '—'} SOL</td>
+            <td class="${t.pnlSol > 0 ? 'green' : t.pnlSol < 0 ? 'red' : ''}">${t.pnlSol != null ? t.pnlSol + ' SOL' : '—'}</td>
+            <td style="color:var(--muted);">${new Date(t.timestamp).toLocaleDateString()}</td>
+          </tr>`).join('');
+      }
+    } catch {}
+  }
+
+  function copyAddress() {
+    const addr = document.getElementById('d-address').textContent;
+    navigator.clipboard.writeText(addr).then(() => {
+      const btn = document.querySelector('.copy-btn');
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = 'Copy', 2000);
+    });
+  }
+
+  // ── Load stats ─────────────────────────────────────────────────────────────
+  async function loadStats() {
+    try {
+      const res  = await fetch(`${API}/api/subscribers`);
+      const data = await res.json();
+      document.getElementById('stat-traders').textContent = data.count || 0;
+    } catch {}
+    try {
+      const res  = await fetch(`${API}/api/trades`);
+      const data = await res.json();
+      document.getElementById('stat-trades').textContent = data.trades?.length || 0;
+    } catch {}
+  }
+
+  // ── Auto-restore session ───────────────────────────────────────────────────
+  const saved = localStorage.getItem('autobags_user');
+  if (saved) {
+    try { currentUser = JSON.parse(saved); } catch {}
+  }
+
+  loadStats();
+</script>
+</body>
+</html>
