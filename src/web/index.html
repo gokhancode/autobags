@@ -371,8 +371,16 @@
 
   <div class="cards">
     <div class="card">
-      <div class="card-label">Balance (SOL)</div>
+      <div class="card-label">Total Worth</div>
+      <div class="card-value" id="d-worth">—</div>
+    </div>
+    <div class="card">
+      <div class="card-label">SOL Balance</div>
       <div class="card-value" id="d-balance">—</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Holdings Value</div>
+      <div class="card-value" id="d-holdings">—</div>
     </div>
     <div class="card">
       <div class="card-label">Total P&L</div>
@@ -670,7 +678,9 @@
     try {
       const res  = await fetch(`${API}/api/portfolio/${currentUser.userId}`);
       const data = await res.json();
+      document.getElementById('d-worth').textContent     = data.totalWorthSol != null ? data.totalWorthSol + ' SOL' : '—';
       document.getElementById('d-balance').textContent  = data.balanceSol != null ? data.balanceSol + ' SOL' : '—';
+      document.getElementById('d-holdings').textContent = data.holdingsValueSol != null ? data.holdingsValueSol + ' SOL' : '0 SOL';
       document.getElementById('d-pnl').textContent      = data.totalPnlSol + ' SOL';
       document.getElementById('d-pnl').className        = 'card-value ' + (parseFloat(data.totalPnlSol) >= 0 ? 'green' : 'red');
       document.getElementById('d-trades').textContent   = data.totalTrades;
