@@ -1,29 +1,23 @@
 /**
- * Trade Explainer — Gemini Flash powered trade reasoning
+ * Trade Explainer — Groq (Llama 3.3 70B) powered trade reasoning
  * Generates human-readable explanations for every buy/sell
  * Production: async queue, retries, graceful fallback
  */
 
-const GEMINI_KEY = process.env.GEMINI_API_KEY;
-const MODEL = 'gemini-flash-latest';
-const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
+const GROQ_KEY = process.env.GROQ_API_KEY;
+const MODEL = 'llama-3.3-70b-versatile';
+const API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 const MAX_RETRIES = 2;
 const RETRY_DELAY = 2000;
 
-// Queue for async processing
 const queue = [];
 let processing = false;
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-/**
- * Generate a trade explanation via Gemini Flash
- * @param {Object} context - Trade context
- * @returns {string} Human-readable explanation
- */
 async function explain(context) {
-  if (!GEMINI_KEY) return 'AI explanation unavailable (no API key configured)';
+  if (!GROQ_KEY) return 'AI explanation unavailable (no API key configured)';
 
   const prompt = buildPrompt(context);
 
@@ -31,18 +25,22 @@ async function explain(context) {
     try {
       const res = await fetch(API_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-goog-api-key': GEMINI_KEY },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${GROQ_KEY}`
+        },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            maxOutputTokens: 200,
-            temperature: 0.3,
-          }
+          model: MODEL,
+          messages: [
+            { role: 'system', content: 'You are a crypto trading AI. Explain trade decisions in 2-3 concise sentences. Be specific about data. No fluff.' },
+            { role: 'user', content: prompt }
+          ],
+          max_tokens: 150,
+          temperature: 0.3,
         })
       });
 
       if (res.status === 429) {
-        // Rate limited — wait and retry
         console.warn(`[Explainer] Rate limited, retry ${attempt + 1}/${MAX_RETRIES}`);
         await sleep(RETRY_DELAY * (attempt + 1));
         continue;
@@ -50,13 +48,13 @@ async function explain(context) {
 
       if (!res.ok) {
         const err = await res.text();
-        console.error(`[Explainer] API error ${res.status}:`, err);
+        console.error(`[Explainer] API error ${res.status}:`, err.slice(0, 200));
         if (attempt < MAX_RETRIES) { await sleep(RETRY_DELAY); continue; }
         return fallbackExplanation(context);
       }
 
       const data = await res.json();
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      const text = data?.choices?.[0]?.message?.content;
       return text?.trim() || fallbackExplanation(context);
 
     } catch (err) {
@@ -71,36 +69,31 @@ async function explain(context) {
 
 function buildPrompt(ctx) {
   if (ctx.type === 'BUY') {
-    return `You are a crypto trading AI explaining your buy decision in 2-3 concise sentences. Be specific about the data.
+    return `Explain why I bought this token:
 
 Token: $${ctx.symbol} (${ctx.mint})
 Intel Score: ${ctx.score}/100
 Amount: ${ctx.solAmount?.toFixed(4)} SOL
-Score Breakdown:
-- Safety (RugCheck): ${ctx.details?.safety || 'passed'}
-- Liquidity: ${ctx.details?.liquidity || 'adequate'}
-- Volume/Liq Ratio: ${ctx.details?.volLiqRatio || 'normal'}
-- Holder Distribution: ${ctx.details?.holders || 'ok'}
-- Social Presence: ${ctx.details?.social || 'unknown'}
-- Momentum: ${ctx.details?.momentum || 'positive'}
-Market Sentiment: ${ctx.details?.sentiment || 'neutral'}
-
-Explain why you bought this token. Be direct, no fluff.`;
+Safety (RugCheck): ${ctx.details?.safety || 'passed'}
+Liquidity: ${ctx.details?.liquidity || 'adequate'}
+Volume/Liq Ratio: ${ctx.details?.volLiqRatio || 'normal'}
+Holder Distribution: ${ctx.details?.holders || 'ok'}
+Social Presence: ${ctx.details?.social || 'unknown'}
+Momentum: ${ctx.details?.momentum || 'positive'}
+Market Sentiment: ${ctx.details?.sentiment || 'neutral'}`;
   }
 
   if (ctx.type === 'SELL' || ctx.type === 'PARTIAL_SELL') {
-    return `You are a crypto trading AI explaining your sell decision in 2-3 concise sentences. Be specific.
+    return `Explain why I sold this token:
 
 Token: $${ctx.symbol}
 Sell Reason: ${ctx.reason}
 P&L: ${ctx.pnlPct != null ? ctx.pnlPct.toFixed(1) + '%' : 'unknown'}
 Hold Duration: ${ctx.holdDuration || 'unknown'}
-Entry: ${ctx.entryPrice || 'unknown'} → Current: ${ctx.currentPrice || 'unknown'}
-
-Explain why you sold. Be direct, reference the specific trigger.`;
+Type: ${ctx.type === 'PARTIAL_SELL' ? 'Partial exit (30% of position)' : 'Full exit'}`;
   }
 
-  return `Explain this ${ctx.type} trade for $${ctx.symbol} in 2 sentences. Reason: ${ctx.reason || 'standard strategy'}`;
+  return `Explain this ${ctx.type} trade for $${ctx.symbol}. Reason: ${ctx.reason || 'standard strategy'}`;
 }
 
 function fallbackExplanation(ctx) {
@@ -116,10 +109,6 @@ function fallbackExplanation(ctx) {
   return `Trade executed for $${ctx.symbol}.`;
 }
 
-/**
- * Queue an explanation (non-blocking)
- * Resolves immediately with a promise that fulfills when explanation is ready
- */
 function queueExplanation(context, callback) {
   queue.push({ context, callback });
   if (!processing) processQueue();
@@ -136,7 +125,6 @@ async function processQueue() {
       console.error('[Explainer] Queue error:', err.message);
       if (callback) callback(fallbackExplanation(context));
     }
-    // Respect rate limits — min 100ms between calls
     await sleep(100);
   }
   processing = false;
