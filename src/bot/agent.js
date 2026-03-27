@@ -5,7 +5,7 @@
  */
 // dotenv loaded by index.js — no need to re-load here
 
-const { VersionedTransaction, Connection, LAMPORTS_PER_SOL } = require('@solana/web3.js');
+const { VersionedTransaction, LAMPORTS_PER_SOL } = require('@solana/web3.js');
 const bs58         = require('bs58');
 const fs           = require('fs');
 const path         = require('path');
@@ -28,7 +28,7 @@ const SETTINGS_FILE    = path.join(__dirname, '../../data/settings.json');
 const SUBSCRIBERS_FILE = path.join(__dirname, '../../data/subscribers.json');
 
 const bags = new BagsClient(BAGS_KEY, process.env.SOLANA_RPC_URL);
-const conn = new Connection(process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com', 'confirmed');
+const rpc  = require('../rpc');
 
 // ── Data helpers ─────────────────────────────────────────────────────────────
 
@@ -139,9 +139,11 @@ async function getTokenPrice(mint) {
 async function getSolBalance(userId) {
   try {
     const { PublicKey } = require('@solana/web3.js');
-    const pubkey  = WalletManager.getPublicKey(userId);
-    const lamports = await conn.getBalance(new PublicKey(pubkey));
-    return lamports / LAMPORTS_PER_SOL;
+    const pubkey = WalletManager.getPublicKey(userId);
+    return await rpc.withRetry(async (conn) => {
+      const lamports = await conn.getBalance(new PublicKey(pubkey));
+      return lamports / LAMPORTS_PER_SOL;
+    });
   } catch { return 0; }
 }
 

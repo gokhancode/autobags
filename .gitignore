@@ -2,4 +2,7 @@ node_modules/
 config/.env
 data/
 *.log
+*.db
+*.db-wal
+*.db-shm
 .DS_Store

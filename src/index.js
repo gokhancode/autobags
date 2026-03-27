@@ -4,6 +4,9 @@ const cors    = require('cors');
 const path    = require('path');
 const app     = express();
 
+// Initialize SQLite database (migrates from JSON on first run)
+require('./db');
+
 app.disable('x-powered-by');
 app.use(cors());
 app.use(express.json());
@@ -25,6 +28,7 @@ app.use(express.static(path.join(__dirname, 'web')));
   app.use(`${prefix}/api/admin`,       require('./api/admin'));
   app.use(`${prefix}/api/fees`,        require('./api/fees'));
   app.use(`${prefix}/api/launch`,      require('./api/launch'));
+  app.use(`${prefix}/api/narratives`,  require('./api/narratives'));
 });
 
 // Global error handler
