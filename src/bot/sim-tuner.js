@@ -217,6 +217,51 @@ async function run() {
   console.log(`  Best score bucket: ${bestBucket || 'N/A'}`);
   if (adjustments.length) console.log(`  Adjustments: ${adjustments.length}`);
   console.log(`[TUNER] === End ===`);
+
+  // ── Tournament cross-learning ─────────────────────────────────────
+  // Check which tournament strategy is winning and steal its params
+  try {
+    const tournament = require('./sim-strategies');
+    const lb = tournament.getLeaderboard();
+    if (lb?.leaderboard?.length) {
+      const best = lb.leaderboard[0]; // sorted by PnL%
+      const worst = lb.leaderboard[lb.leaderboard.length - 1];
+      console.log(`[TUNER] 🏆 Tournament leader: ${best.emoji} ${best.name} (${best.pnlPct}%) | Worst: ${worst.emoji} ${worst.name} (${worst.pnlPct}%)`);
+      console.log(`[TUNER]    Session: ${lb.session} | Total: $${lb.totalValue} | Rebalances: ${lb.rebalances}`);
+
+      // If tournament winner has better PnL than sim, adopt its SL/TP params
+      if (parseFloat(best.pnlPct) > parseFloat(state.totalPnlUsd / state.startBalanceUsd * 100) && parseInt(best.trades) > 3) {
+        const bestParams = best.params;
+        if (bestParams && bestParams.sl && Math.abs(bestParams.sl - state.stopLossPct) > 0.5) {
+          state.stopLossPct = bestParams.sl;
+          state.takeProfitPct = bestParams.tp;
+          state.maxHoldMinutes = bestParams.maxHold;
+          state.trailingStopPct = bestParams.trailing;
+          save(SIM_FILE, state);
+          console.log(`[TUNER] 🧬 Adopted ${best.name}'s params: SL=${bestParams.sl}% TP=${bestParams.tp}% Hold=${bestParams.maxHold}min Trail=${bestParams.trailing}%`);
+          adjustments.push(`Adopted ${best.name}'s winning params`);
+        }
+      }
+
+      // Log tournament state
+      report.tournament = {
+        leader: best.name,
+        leaderPnl: best.pnlPct + '%',
+        worst: worst.name,
+        worstPnl: worst.pnlPct + '%',
+        totalValue: lb.totalValue,
+        session: lb.session
+      };
+      // Re-save log with tournament data
+      const updatedLog = load(LOG_FILE) || [];
+      updatedLog[updatedLog.length - 1] = report;
+      save(LOG_FILE, updatedLog);
+    }
+  } catch (e) {
+    console.log(`[TUNER] Tournament check skipped: ${e.message}`);
+  }
+
+  console.log(`[TUNER] === Complete ===`);
 }
 
 run().catch(e => console.error('[TUNER] Error:', e.message));

@@ -30,6 +30,7 @@ app.use(express.static(path.join(__dirname, 'web')));
   app.use(`${prefix}/api/launch`,      require('./api/launch'));
   app.use(`${prefix}/api/narratives`,  require('./api/narratives'));
   app.use(`${prefix}/api/sim`,         require('./api/sim'));
+  app.use(`${prefix}/api/tournament`,  require('./api/tournament'));
 });
 
 // Global error handler
@@ -70,4 +71,8 @@ app.listen(PORT, () => {
   // Start paper trading simulator ($1000 high-freq)
   const sim = require('./bot/simulator');
   sim.start(15000);
+
+  // Start strategy tournament ($1000 split across 5 strategies)
+  const tournament = require('./bot/sim-strategies');
+  tournament.start(1000, 15000);
 });
