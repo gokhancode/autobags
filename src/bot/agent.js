@@ -12,6 +12,7 @@ const path         = require('path');
 const BagsClient   = require('./bags-client');
 const WalletManager = require('./wallet-manager');
 const intel        = require('./intel-bridge');
+const explainer    = require('./trade-explainer');
 
 const BAGS_KEY     = process.env.BAGS_API_KEY;
 const PARTNER_KEY  = process.env.BAGS_PARTNER_KEY;
@@ -214,7 +215,20 @@ async function scout(userId, settings, positions) {
         signature: result.signature
       };
 
-      logTrade(userId, { type: 'BUY', symbol, mint, solAmount: solToSpend, score, signature: result.signature, entryPrice });
+      // Generate AI explanation async
+      explainer.queueExplanation({
+        type: 'BUY', symbol, mint, score, solAmount: solToSpend,
+        details: { safety: scoreResult.safety?.verdict, liquidity: scoreResult.liquidity?.verdict,
+                   holders: scoreResult.holders?.verdict, social: scoreResult.social?.verdict,
+                   momentum: scoreResult.momentum?.verdict, sentiment: scoreResult.market?.sentiment }
+      }, (explanation) => {
+        // Append explanation to trade record
+        const trades = load(TRADES_FILE, []);
+        const idx = trades.findLastIndex(t => t.signature === result.signature);
+        if (idx >= 0) { trades[idx].explanation = explanation; save(TRADES_FILE, trades); }
+      });
+
+      logTrade(userId, { type: 'BUY', symbol, mint, solAmount: solToSpend, score, signature: result.signature, entryPrice, explanation: 'Generating...' });
       console.log(`[Agent] ✅ BUY ${symbol} — sig: ${result.signature?.slice(0, 20)}...`);
       break; // one buy per tick
     } catch (err) {
@@ -263,7 +277,20 @@ async function monitorPositions(userId, userPositions, settings, allPositions) {
         const pnlSol = parseFloat(result.outAmount) / LAMPORTS_PER_SOL - pos.solSpent;
 
         delete allPositions[userId][mint];
-        logTrade(userId, { type: 'SELL', symbol: pos.symbol, mint, reason, pricePct, pnlSol, signature: result.signature });
+
+        const holdMs = new Date() - new Date(pos.entryTime);
+        const holdDuration = holdMs < 3600000 ? `${Math.round(holdMs/60000)}m` : `${(holdMs/3600000).toFixed(1)}h`;
+
+        explainer.queueExplanation({
+          type: 'SELL', symbol: pos.symbol, mint, reason, pnlPct: pricePct,
+          holdDuration, entryPrice: pos.entryPrice, currentPrice: null
+        }, (explanation) => {
+          const trades = load(TRADES_FILE, []);
+          const idx = trades.findLastIndex(t => t.signature === result.signature);
+          if (idx >= 0) { trades[idx].explanation = explanation; save(TRADES_FILE, trades); }
+        });
+
+        logTrade(userId, { type: 'SELL', symbol: pos.symbol, mint, reason, pricePct, pnlSol, signature: result.signature, explanation: 'Generating...' });
         console.log(`[Agent] ✅ SELL ${pos.symbol} — P&L: ${pnlSol >= 0 ? '+' : ''}${pnlSol.toFixed(4)} SOL`);
       } catch (err) {
         console.error(`[Agent] Sell failed for ${pos.symbol}:`, err.message);
