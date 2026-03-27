@@ -30,4 +30,8 @@ app.get('*', (req, res) => {
 const PORT = process.env.PORT || 3500;
 app.listen(PORT, () => {
   console.log(`🤖 AUTOBAGS running on http://localhost:${PORT}`);
+
+  // Start trading agent (60s interval)
+  const { start } = require('./bot/agent');
+  start(60000);
 });

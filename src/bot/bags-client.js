@@ -68,9 +68,9 @@ class BagsClient {
     });
   }
 
-  /** POST /transaction/send */
-  async sendTransaction(serializedTx) {
-    return this.post('/transaction/send', { transaction: serializedTx });
+  /** POST /solana/send-transaction — base58 encoded signed VersionedTransaction */
+  async sendTransaction(base58SignedTx) {
+    return this.post('/solana/send-transaction', { transaction: base58SignedTx });
   }
 
   // ─── Fee Sharing / Partner ─────────────────────────────────────────────────

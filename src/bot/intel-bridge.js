@@ -26,11 +26,11 @@ class IntelBridge {
   // Score a token using intel.py
   async scoreToken(mint, symbol) {
     return new Promise((resolve) => {
+      // intel.py takes positional args: <mint> <symbol>
       const proc = spawn('python3', [
         path.join(TRADING_DIR, 'intel.py'),
-        '--mint', mint,
-        '--symbol', symbol || 'UNKNOWN',
-        '--json'
+        mint,
+        symbol || 'UNKNOWN'
       ], { timeout: 30000 });
 
       let stdout = '';
@@ -41,7 +41,10 @@ class IntelBridge {
       proc.on('close', (code) => {
         try {
           const result = JSON.parse(stdout);
-          resolve(result);
+          // intel.py uses 'confidence' as score field
+          const score = result.score ?? result.confidence ?? 0;
+          const safe  = result.verdict !== 'AVOID' && score > 0;
+          resolve({ ...result, score, safe });
         } catch {
           resolve({ score: 0, safe: false, error: stderr || 'parse failed' });
         }
