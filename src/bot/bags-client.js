@@ -33,9 +33,9 @@ class BagsClient {
 
   // ─── Token Discovery ───────────────────────────────────────────────────────
 
-  /** GET /token-launch/feed */
-  async getTokenFeed(limit = 20) {
-    return this.get(`/token-launch/feed?limit=${limit}`);
+  /** GET /token-launch/feed — no limit param supported, returns 100 */
+  async getTokenFeed() {
+    return this.get('/token-launch/feed');
   }
 
   /** GET /solana/bags/pools */
