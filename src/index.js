@@ -22,6 +22,7 @@ app.use(express.static(path.join(__dirname, 'web')));
   app.use(`${prefix}/api/status`,      require('./api/status'));
   app.use(`${prefix}/api/stats`,       require('./api/stats'));
   app.use(`${prefix}/api/sell`,        require('./api/sell'));
+  app.use(`${prefix}/api/admin`,       require('./api/admin'));
 });
 
 // Global error handler
@@ -36,6 +37,14 @@ app.get('/dashboard', (req, res) => {
 });
 app.get('/autobags/dashboard', (req, res) => {
   res.sendFile(path.join(__dirname, 'web', 'dashboard.html'));
+});
+
+// Admin panel
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'web', 'admin.html'));
+});
+app.get('/autobags/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'web', 'admin.html'));
 });
 
 // Fallback to index.html (landing page)

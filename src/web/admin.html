@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin — AUTOBAGS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0a0a0f; --surface: #12121a; --border: #1e1e2e;
+      --accent: #7c3aed; --accent2: #a855f7; --green: #22c55e;
+      --red: #ef4444; --yellow: #eab308; --text: #f1f1f5;
+      --muted: #6b7280; --mono: 'Space Mono', monospace;
+    }
+    [data-theme="light"] {
+      --bg: #f8f9fb; --surface: #ffffff; --border: #e2e5ea;
+      --accent: #7c3aed; --accent2: #6d28d9; --green: #16a34a;
+      --red: #dc2626; --yellow: #ca8a04; --text: #111827; --muted: #6b7280;
+    }
+    [data-theme="light"] nav { background: rgba(248,249,251,0.95); }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
+    nav { display: flex; align-items: center; justify-content: space-between; padding: 16px 32px; border-bottom: 1px solid var(--border); background: rgba(10,10,15,0.95); backdrop-filter: blur(12px); position: sticky; top: 0; z-index: 100; }
+    .logo { font-size: 18px; font-weight: 800; letter-spacing: -0.5px; }
+    .logo span { color: var(--accent2); }
+    .logo .admin-badge { font-size: 10px; background: var(--red); color: #fff; padding: 2px 6px; border-radius: 4px; margin-left: 8px; vertical-align: middle; font-weight: 700; }
+    .nav-right { display: flex; align-items: center; gap: 12px; }
+    .nav-btn { padding: 6px 14px; background: transparent; border: 1px solid var(--border); border-radius: 8px; color: var(--muted); font-size: 12px; cursor: pointer; text-decoration: none; }
+    .nav-btn:hover { border-color: var(--accent); color: var(--text); }
+    .theme-toggle { background: none; border: 1px solid var(--border); border-radius: 8px; padding: 4px 8px; cursor: pointer; font-size: 14px; line-height: 1; }
+
+    .container { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+    .section-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+
+    /* Cards */
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 28px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px; }
+    .card-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; font-weight: 600; }
+    .card-value { font-size: 20px; font-weight: 800; font-family: var(--mono); }
+    .card-value.green { color: var(--green); }
+    .card-value.red { color: var(--red); }
+
+    /* Panel */
+    .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+    .panel-title { font-size: 13px; font-weight: 700; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); }
+
+    /* Table */
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th { text-align: left; padding: 8px 10px; color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--border); font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+    td { padding: 10px; border-bottom: 1px solid rgba(30,30,46,0.4); }
+    tr:last-child td { border-bottom: none; }
+    .pill { padding: 2px 8px; border-radius: 99px; font-size: 10px; font-weight: 700; }
+    .pill.active { background: rgba(34,197,94,0.15); color: var(--green); }
+    .pill.inactive { background: rgba(239,68,68,0.15); color: var(--red); }
+    .pill.buy { background: rgba(34,197,94,0.15); color: var(--green); }
+    .pill.sell { background: rgba(239,68,68,0.15); color: var(--red); }
+    .mono { font-family: var(--mono); }
+    .accent { color: var(--accent2); }
+    .green { color: var(--green); }
+    .red { color: var(--red); }
+
+    .action-btn { padding: 4px 10px; border-radius: 6px; font-size: 10px; font-weight: 700; cursor: pointer; border: 1px solid; transition: all .2s; background: transparent; }
+    .action-btn.pause { color: var(--yellow); border-color: var(--yellow); }
+    .action-btn.pause:hover { background: rgba(234,179,8,0.15); }
+    .action-btn.sell { color: var(--red); border-color: var(--red); }
+    .action-btn.sell:hover { background: rgba(239,68,68,0.15); }
+
+    .health-row { display: flex; gap: 16px; flex-wrap: wrap; }
+    .health-item { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+    .health-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .health-dot.ok { background: var(--green); }
+    .health-dot.warn { background: var(--yellow); }
+    .health-dot.err { background: var(--red); }
+
+    .empty { text-align: center; padding: 24px; color: var(--muted); font-size: 12px; }
+
+    @media (max-width: 600px) { .container { padding: 16px 12px; } .cards { grid-template-columns: repeat(2, 1fr); } }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">AUTO<span>BAGS</span> <span class="admin-badge">ADMIN</span></div>
+  <div class="nav-right">
+    <button class="theme-toggle" onclick="toggleTheme()" id="theme-btn">🌙</button>
+    <a href="/dashboard" class="nav-btn">Dashboard</a>
+    <a href="/" class="nav-btn">Home</a>
+  </div>
+</nav>
+
+<div class="container">
+
+  <!-- Health -->
+  <div class="panel">
+    <div class="panel-title">System Health</div>
+    <div class="health-row" id="health-row">
+      <div class="health-item"><div class="health-dot" id="h-server"></div> Server</div>
+      <div class="health-item"><div class="health-dot" id="h-bags"></div> Bags API</div>
+      <div class="health-item"><div class="health-dot" id="h-rpc"></div> Solana RPC</div>
+      <div class="health-item"><div class="health-dot" id="h-agent"></div> Agent</div>
+      <div class="health-item" style="margin-left:auto; color:var(--muted); font-size:11px;" id="h-uptime"></div>
+    </div>
+  </div>
+
+  <!-- Platform stats -->
+  <div class="cards">
+    <div class="card">
+      <div class="card-label">Total Users</div>
+      <div class="card-value" id="s-users">—</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Active Bots</div>
+      <div class="card-value green" id="s-active">—</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Open Positions</div>
+      <div class="card-value" id="s-positions">—</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Total Trades</div>
+      <div class="card-value" id="s-trades">—</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Platform P&L</div>
+      <div class="card-value" id="s-pnl">—</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Win Rate</div>
+      <div class="card-value" id="s-winrate">—</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Fee Revenue (est)</div>
+      <div class="card-value green" id="s-fees">—</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Total AUM</div>
+      <div class="card-value" id="s-aum">—</div>
+    </div>
+  </div>
+
+  <!-- Users -->
+  <div class="panel">
+    <div class="panel-title">Users</div>
+    <table>
+      <thead><tr><th>User</th><th>Wallet</th><th>Balance</th><th>Positions</th><th>Trades</th><th>P&L</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody id="users-body"><tr><td colspan="8" class="empty">Loading...</td></tr></tbody>
+    </table>
+  </div>
+
+  <!-- All positions -->
+  <div class="panel">
+    <div class="panel-title">All Open Positions</div>
+    <table>
+      <thead><tr><th>User</th><th>Token</th><th>Entry</th><th>Current</th><th>P&L</th><th>Score</th><th>Time</th><th>Action</th></tr></thead>
+      <tbody id="positions-body"><tr><td colspan="8" class="empty">No positions</td></tr></tbody>
+    </table>
+  </div>
+
+  <!-- Recent trades -->
+  <div class="panel">
+    <div class="panel-title">Recent Trades (all users)</div>
+    <table>
+      <thead><tr><th>User</th><th>Token</th><th>Type</th><th>Amount</th><th>P&L</th><th>Reason</th><th>Time</th></tr></thead>
+      <tbody id="trades-body"><tr><td colspan="7" class="empty">No trades</td></tr></tbody>
+    </table>
+  </div>
+
+</div>
+
+<script>
+  function toggleTheme() {
+    const next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('autobags_theme', next);
+    document.getElementById('theme-btn').textContent = next === 'light' ? '☀️' : '🌙';
+  }
+  (function() {
+    const t = localStorage.getItem('autobags_theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', t);
+    document.getElementById('theme-btn').textContent = t === 'light' ? '☀️' : '🌙';
+  })();
+
+  const BASE = window.location.pathname.startsWith('/autobags') ? '/autobags' : '';
+  const API  = BASE;
+  const session = JSON.parse(localStorage.getItem('autobags_session') || 'null');
+  if (!session) { window.location.href = '/'; }
+  const authToken = session?.token;
+
+  async function loadAdmin() {
+    try {
+      const res = await fetch(`${API}/api/admin/overview`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+      const data = await res.json();
+      if (!data.success) { alert(data.error || 'Access denied'); window.location.href = '/dashboard'; return; }
+      const d = data.data;
+
+      // Stats
+      document.getElementById('s-users').textContent = d.totalUsers;
+      document.getElementById('s-active').textContent = d.activeBots;
+      document.getElementById('s-positions').textContent = d.totalOpenPositions;
+      document.getElementById('s-trades').textContent = d.totalTrades;
+      document.getElementById('s-pnl').textContent = d.platformPnl.toFixed(4) + ' SOL';
+      document.getElementById('s-pnl').className = 'card-value ' + (d.platformPnl >= 0 ? 'green' : 'red');
+      document.getElementById('s-winrate').textContent = d.winRate || '—';
+      document.getElementById('s-fees').textContent = d.estFeeRevenue.toFixed(4) + ' SOL';
+      document.getElementById('s-aum').textContent = d.totalAum.toFixed(4) + ' SOL';
+
+      // Health
+      document.getElementById('h-server').className = 'health-dot ok';
+      document.getElementById('h-bags').className = 'health-dot ' + (d.health.bags ? 'ok' : 'err');
+      document.getElementById('h-rpc').className = 'health-dot ' + (d.health.rpc ? 'ok' : 'err');
+      document.getElementById('h-agent').className = 'health-dot ' + (d.health.agent ? 'ok' : 'warn');
+      document.getElementById('h-uptime').textContent = 'Updated: ' + new Date().toLocaleTimeString();
+
+      // Users table
+      const ub = document.getElementById('users-body');
+      if (d.users.length) {
+        ub.innerHTML = d.users.map(u => `<tr>
+          <td class="mono accent">${u.userId}</td>
+          <td class="mono" style="font-size:10px;max-width:120px;overflow:hidden;text-overflow:ellipsis;">${u.wallet || '—'}</td>
+          <td class="mono">${u.balance ?? '—'}</td>
+          <td>${u.openPositions}</td>
+          <td>${u.trades}</td>
+          <td class="${u.pnl >= 0 ? 'green' : 'red'} mono">${u.pnl?.toFixed(4) || '0'}</td>
+          <td><span class="pill ${u.active ? 'active' : 'inactive'}">${u.active ? 'active' : 'paused'}</span></td>
+          <td>
+            <button class="action-btn pause" onclick="toggleUser('${u.userId}', ${!u.active})">${u.active ? 'Pause' : 'Resume'}</button>
+          </td>
+        </tr>`).join('');
+      }
+
+      // Positions
+      const pb = document.getElementById('positions-body');
+      if (d.positions.length) {
+        pb.innerHTML = d.positions.map(p => `<tr>
+          <td class="mono accent">${p.userId}</td>
+          <td class="mono accent">$${p.symbol}</td>
+          <td class="mono">${p.solSpent?.toFixed(4)}</td>
+          <td class="mono">${p.currentValue?.toFixed(4) || '—'}</td>
+          <td class="${p.pnlPct >= 0 ? 'green' : 'red'} mono">${p.pnlPct >= 0 ? '+' : ''}${p.pnlPct?.toFixed(1) || '0'}%</td>
+          <td>${p.score}</td>
+          <td style="color:var(--muted);">${timeAgo(p.entryTime)}</td>
+          <td><button class="action-btn sell" onclick="adminSell('${p.userId}','${p.mint}','$${p.symbol}',this)">Force sell</button></td>
+        </tr>`).join('');
+      }
+
+      // Trades
+      const tb = document.getElementById('trades-body');
+      if (d.recentTrades.length) {
+        tb.innerHTML = d.recentTrades.map(t => `<tr>
+          <td class="mono accent">${t.userId || '—'}</td>
+          <td class="mono accent">$${t.symbol || '?'}</td>
+          <td><span class="pill ${t.type === 'BUY' ? 'buy' : 'sell'}">${t.type}</span></td>
+          <td class="mono">${parseFloat(t.solAmount||0).toFixed(4)}</td>
+          <td class="${(t.pnlSol||0)>=0?'green':'red'} mono">${t.pnlSol!=null?(t.pnlSol>0?'+':'')+parseFloat(t.pnlSol).toFixed(4):'—'}</td>
+          <td style="color:var(--muted);">${t.reason || '—'}</td>
+          <td style="color:var(--muted);">${new Date(t.timestamp).toLocaleString()}</td>
+        </tr>`).join('');
+      }
+    } catch (e) { console.error('Admin load failed:', e); }
+  }
+
+  function timeAgo(iso) {
+    const ms = Date.now() - new Date(iso).getTime();
+    if (ms < 60000) return Math.round(ms/1000) + 's ago';
+    if (ms < 3600000) return Math.round(ms/60000) + 'm ago';
+    return (ms/3600000).toFixed(1) + 'h ago';
+  }
+
+  async function toggleUser(userId, active) {
+    await fetch(`${API}/api/admin/toggle-user`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+      body: JSON.stringify({ userId, active })
+    });
+    loadAdmin();
+  }
+
+  async function adminSell(userId, mint, symbol, btn) {
+    if (!confirm(`Force sell ${symbol} for ${userId}?`)) return;
+    btn.disabled = true; btn.textContent = 'Selling...';
+    const res = await fetch(`${API}/api/admin/force-sell`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+      body: JSON.stringify({ userId, mint })
+    });
+    const data = await res.json();
+    if (data.success) {
+      btn.textContent = 'Sold'; btn.style.color = 'var(--green)';
+      setTimeout(loadAdmin, 2000);
+    } else {
+      alert(data.error || 'Failed'); btn.disabled = false; btn.textContent = 'Force sell';
+    }
+  }
+
+  loadAdmin();
+  setInterval(loadAdmin, 30000);
+</script>
+</body>
+</html>
