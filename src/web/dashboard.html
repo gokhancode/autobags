@@ -221,6 +221,20 @@
     <button class="copy-btn" onclick="copyAddr()">Copy</button>
   </div>
 
+  <!-- Equity Chart -->
+  <div class="panel">
+    <div class="panel-title" style="display:flex; justify-content:space-between; align-items:center;">
+      <span>📈 Portfolio Value</span>
+      <div style="display:flex; gap:4px;">
+        <button class="nav-btn" style="padding:3px 8px; font-size:10px;" onclick="loadEquity('1d')" id="eq-1d">1D</button>
+        <button class="nav-btn" style="padding:3px 8px; font-size:10px; border-color:var(--accent); color:var(--accent2);" onclick="loadEquity('7d')" id="eq-7d">7D</button>
+        <button class="nav-btn" style="padding:3px 8px; font-size:10px;" onclick="loadEquity('30d')" id="eq-30d">30D</button>
+      </div>
+    </div>
+    <canvas id="equity-chart" height="160" style="width:100%;"></canvas>
+    <div id="equity-empty" style="display:none; text-align:center; padding:40px; color:var(--muted); font-size:12px;">Chart data building... check back in a few minutes.</div>
+  </div>
+
   <!-- Open positions -->
   <div class="panel">
     <div class="panel-title"><div class="dot"></div> Open Positions</div>
@@ -269,6 +283,30 @@
       <div class="toggle-row" style="margin-top:8px;">
         <div><label>Max positions</label></div>
         <select id="s-maxpos"><option value="1">1</option><option value="2">2</option><option value="3">3</option></select>
+      </div>
+
+      <div style="margin-top:16px; font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; border-top:1px solid var(--border); padding-top:16px;">Risk Controls</div>
+      <div class="adv-grid" style="margin-top:12px;">
+        <div>
+          <div class="range-row"><label>Daily loss limit <span id="v-dll">0</span>%</label><input type="range" id="s-dll" min="0" max="50" value="0" oninput="document.getElementById('v-dll').textContent=this.value" /><small style="color:var(--muted);font-size:10px;">0 = disabled</small></div>
+          <div class="range-row"><label>Cooldown after loss <span id="v-cool">0</span>min</label><input type="range" id="s-cool" min="0" max="120" step="5" value="0" oninput="document.getElementById('v-cool').textContent=this.value" /></div>
+        </div>
+        <div>
+          <div class="range-row"><label>Min token age <span id="v-minage">5</span>min</label><input type="range" id="s-minage" min="0" max="120" step="5" value="5" oninput="document.getElementById('v-minage').textContent=this.value" /></div>
+          <div class="range-row"><label>Max token age <span id="v-maxage">48</span>h</label><input type="range" id="s-maxage" min="0" max="168" step="1" value="48" oninput="document.getElementById('v-maxage').textContent=this.value" /><small style="color:var(--muted);font-size:10px;">0 = no limit</small></div>
+        </div>
+      </div>
+
+      <div style="margin-top:12px; font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px;">Trading Hours (UTC)</div>
+      <div style="display:flex; gap:12px; margin-top:8px; align-items:center;">
+        <div><label style="font-size:11px;">Start</label><select id="s-thstart" style="margin-left:4px;"></select></div>
+        <div><label style="font-size:11px;">End</label><select id="s-thend" style="margin-left:4px;"></select></div>
+        <small style="color:var(--muted);font-size:10px;">Both 0 = 24/7</small>
+      </div>
+
+      <div class="toggle-row" style="margin-top:12px;">
+        <div><label>Auto-compound</label><small>Reinvest profits</small></div>
+        <label class="toggle"><input type="checkbox" id="s-compound" /><span class="slider-toggle"></span></label>
       </div>
     </div>
 
@@ -408,6 +446,14 @@
       document.getElementById('s-score').value = s.minIntelScore || 65; document.getElementById('v-score').textContent = s.minIntelScore || 65;
       document.getElementById('s-slip').value = s.slippageBps || 100;   document.getElementById('v-slip').textContent = s.slippageBps || 100;
       document.getElementById('s-maxpos').value = String(s.maxPositions || 1);
+      // New settings
+      document.getElementById('s-dll').value = s.dailyLossLimitPct || 0;     document.getElementById('v-dll').textContent = s.dailyLossLimitPct || 0;
+      document.getElementById('s-cool').value = s.cooldownMinutes || 0;       document.getElementById('v-cool').textContent = s.cooldownMinutes || 0;
+      document.getElementById('s-minage').value = s.minTokenAgeMinutes || 5;  document.getElementById('v-minage').textContent = s.minTokenAgeMinutes || 5;
+      document.getElementById('s-maxage').value = s.maxTokenAgeHours || 48;   document.getElementById('v-maxage').textContent = s.maxTokenAgeHours || 48;
+      document.getElementById('s-thstart').value = String(s.tradingHoursStart || 0);
+      document.getElementById('s-thend').value = String(s.tradingHoursEnd || 0);
+      document.getElementById('s-compound').checked = s.autoCompound !== false;
     } catch (e) { console.warn('Settings load failed:', e); }
   }
 
@@ -436,6 +482,13 @@
       minIntelScore: parseInt(document.getElementById('s-score').value),
       slippageBps: parseInt(document.getElementById('s-slip').value),
       maxPositions: parseInt(document.getElementById('s-maxpos').value),
+      dailyLossLimitPct: parseInt(document.getElementById('s-dll').value),
+      cooldownMinutes: parseInt(document.getElementById('s-cool').value),
+      minTokenAgeMinutes: parseInt(document.getElementById('s-minage').value),
+      maxTokenAgeHours: parseInt(document.getElementById('s-maxage').value),
+      tradingHoursStart: parseInt(document.getElementById('s-thstart').value),
+      tradingHoursEnd: parseInt(document.getElementById('s-thend').value),
+      autoCompound: document.getElementById('s-compound').checked,
     };
     try {
       const res = await fetch(`${API}/api/settings`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) });
@@ -494,9 +547,77 @@
     if (row) row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
   }
 
-  function loadAll() { loadPortfolio(); loadTrades(); loadSettings(); }
+  // Populate trading hours dropdowns
+  ['s-thstart','s-thend'].forEach(id => {
+    const sel = document.getElementById(id);
+    for (let i = 0; i < 24; i++) sel.innerHTML += `<option value="${i}">${i}:00</option>`;
+  });
+
+  // Equity chart (minimal canvas chart — no library needed)
+  async function loadEquity(period = '7d') {
+    ['1d','7d','30d'].forEach(p => {
+      document.getElementById('eq-'+p).style.borderColor = p === period ? 'var(--accent)' : 'var(--border)';
+      document.getElementById('eq-'+p).style.color = p === period ? 'var(--accent2)' : 'var(--muted)';
+    });
+    try {
+      const res = await fetch(`${API}/api/portfolio/${userId}/equity?period=${period}`);
+      const data = await res.json();
+      const points = data.points || [];
+      const canvas = document.getElementById('equity-chart');
+      const empty = document.getElementById('equity-empty');
+      if (points.length < 2) { canvas.style.display = 'none'; empty.style.display = 'block'; return; }
+      canvas.style.display = 'block'; empty.style.display = 'none';
+
+      const ctx = canvas.getContext('2d');
+      const dpr = window.devicePixelRatio || 1;
+      const w = canvas.offsetWidth; const h = 160;
+      canvas.width = w * dpr; canvas.height = h * dpr;
+      ctx.scale(dpr, dpr);
+      ctx.clearRect(0, 0, w, h);
+
+      const vals = points.map(p => p[1]);
+      const min = Math.min(...vals) * 0.98;
+      const max = Math.max(...vals) * 1.02;
+      const range = max - min || 1;
+
+      // Gradient fill
+      const grad = ctx.createLinearGradient(0, 0, 0, h);
+      const isUp = vals[vals.length-1] >= vals[0];
+      grad.addColorStop(0, isUp ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)');
+      grad.addColorStop(1, 'rgba(10,10,15,0)');
+
+      // Draw area
+      ctx.beginPath();
+      ctx.moveTo(0, h);
+      points.forEach((p, i) => {
+        const x = (i / (points.length - 1)) * w;
+        const y = h - ((p[1] - min) / range) * (h - 20) - 10;
+        ctx.lineTo(x, y);
+      });
+      ctx.lineTo(w, h); ctx.closePath();
+      ctx.fillStyle = grad; ctx.fill();
+
+      // Draw line
+      ctx.beginPath();
+      points.forEach((p, i) => {
+        const x = (i / (points.length - 1)) * w;
+        const y = h - ((p[1] - min) / range) * (h - 20) - 10;
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      });
+      ctx.strokeStyle = isUp ? '#22c55e' : '#ef4444';
+      ctx.lineWidth = 2; ctx.stroke();
+
+      // Labels
+      ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--muted').trim();
+      ctx.font = '10px Space Mono';
+      ctx.fillText(max.toFixed(4) + ' SOL', 4, 14);
+      ctx.fillText(min.toFixed(4) + ' SOL', 4, h - 4);
+    } catch (e) { console.warn('Equity load failed:', e); }
+  }
+
+  function loadAll() { loadPortfolio(); loadTrades(); loadSettings(); loadEquity('7d'); }
   loadAll();
-  setInterval(loadAll, 30000); // auto-refresh every 30s
+  setInterval(loadAll, 30000);
 </script>
 </body>
 </html>

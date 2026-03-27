@@ -13,6 +13,9 @@ const BagsClient   = require('./bags-client');
 const WalletManager = require('./wallet-manager');
 const intel        = require('./intel-bridge');
 const explainer    = require('./trade-explainer');
+const notifier     = require('./notifier');
+const dataSources  = require('./data-sources');
+const equity       = require('./equity-tracker');
 
 const BAGS_KEY     = process.env.BAGS_API_KEY;
 const PARTNER_KEY  = process.env.BAGS_PARTNER_KEY;
@@ -39,8 +42,27 @@ function save(file, data) {
 }
 function getSettings(userId) {
   const all = load(SETTINGS_FILE, {});
-  const defaults = { mode:'basic', riskLevel:'medium', active:true, stopLossPct:8, takeProfitPct:25, partialExitPct:10, maxSolPerTrade:80, minIntelScore:65, slippageBps:100, maxPositions:1 };
-  const presets  = { low:{stopLossPct:5,takeProfitPct:15,minIntelScore:75,maxSolPerTrade:50}, medium:{stopLossPct:8,takeProfitPct:25,minIntelScore:65,maxSolPerTrade:80}, high:{stopLossPct:12,takeProfitPct:40,minIntelScore:55,maxSolPerTrade:95} };
+  const defaults = {
+    mode:'basic', riskLevel:'medium', active:true,
+    stopLossPct:8, takeProfitPct:25, partialExitPct:10,
+    maxSolPerTrade:80, minIntelScore:65, slippageBps:100, maxPositions:1,
+    // New settings
+    dailyLossLimitPct: 0,     // 0 = disabled, otherwise stop trading if down X% today
+    tradingHoursStart: 0,     // UTC hour (0-23), 0 = no restriction
+    tradingHoursEnd: 0,       // UTC hour (0-23), 0 = no restriction
+    minTokenAgeMinutes: 5,    // min token age in minutes
+    maxTokenAgeHours: 48,     // max token age in hours (0 = no limit)
+    minMarketCapUsd: 10000,   // minimum market cap
+    maxMarketCapUsd: 0,       // 0 = no limit
+    cooldownMinutes: 0,       // wait X min after a loss before next trade
+    autoCompound: true,       // reinvest profits
+    blacklist: []
+  };
+  const presets = {
+    low:    { stopLossPct:5, takeProfitPct:15, minIntelScore:75, maxSolPerTrade:50 },
+    medium: { stopLossPct:8, takeProfitPct:25, minIntelScore:65, maxSolPerTrade:80 },
+    high:   { stopLossPct:12, takeProfitPct:40, minIntelScore:55, maxSolPerTrade:95 }
+  };
   const s = { ...defaults, ...(all[userId] || {}) };
   if (s.mode === 'basic') Object.assign(s, presets[s.riskLevel] || presets.medium);
   return s;
@@ -134,6 +156,10 @@ async function tick() {
   for (const userId of users) {
     const settings = getSettings(userId);
     try {
+      // Snapshot equity every tick (tracker deduplicates to 5min intervals)
+      const bal = await getSolBalance(userId);
+      equity.snapshot(userId, bal);
+
       const userPositions = positions[userId] || {};
       const posCount = Object.keys(userPositions).length;
 
@@ -155,6 +181,44 @@ async function tick() {
 // ── Scout ─────────────────────────────────────────────────────────────────────
 
 async function scout(userId, settings, positions) {
+  // Check trading hours
+  if (settings.tradingHoursStart || settings.tradingHoursEnd) {
+    const hour = new Date().getUTCHours();
+    const start = settings.tradingHoursStart;
+    const end = settings.tradingHoursEnd;
+    if (start < end) {
+      if (hour < start || hour >= end) return; // outside window
+    } else if (start > end) {
+      if (hour < start && hour >= end) return; // overnight window
+    }
+  }
+
+  // Check daily loss limit
+  if (settings.dailyLossLimitPct > 0) {
+    const today = new Date().toISOString().slice(0, 10);
+    const trades = load(TRADES_FILE, []);
+    const todayTrades = trades.filter(t => t.userId === userId && t.timestamp?.startsWith(today));
+    const todayPnl = todayTrades.reduce((s, t) => s + (t.pnlSol || 0), 0);
+    const balance = await getSolBalance(userId);
+    if (balance > 0 && todayPnl < 0 && Math.abs(todayPnl / balance) * 100 >= settings.dailyLossLimitPct) {
+      console.log(`[Scout] ${userId}: daily loss limit hit (${todayPnl.toFixed(4)} SOL)`);
+      return;
+    }
+  }
+
+  // Check cooldown after loss
+  if (settings.cooldownMinutes > 0) {
+    const trades = load(TRADES_FILE, []);
+    const lastSell = trades.filter(t => t.userId === userId && t.type === 'SELL').pop();
+    if (lastSell && (lastSell.pnlSol || 0) < 0) {
+      const msSinceLoss = Date.now() - new Date(lastSell.timestamp).getTime();
+      if (msSinceLoss < settings.cooldownMinutes * 60000) {
+        console.log(`[Scout] ${userId}: cooldown (${Math.round((settings.cooldownMinutes * 60000 - msSinceLoss) / 60000)}m left)`);
+        return;
+      }
+    }
+  }
+
   const balance = await getSolBalance(userId);
   const tradeable = balance - GAS_RESERVE;
   if (tradeable < 0.01) {
@@ -182,12 +246,52 @@ async function scout(userId, settings, positions) {
     const symbol = token.symbol || token.ticker || mint.slice(0, 8);
     if (!mint) continue;
 
-    // Score token
-    const scoreResult = await intel.scoreToken(mint, symbol).catch(() => ({ score: 0 }));
-    const score = scoreResult?.score || 0;
+    // Blacklist check
+    if (settings.blacklist?.includes(mint)) { continue; }
+
+    // Token age + market cap filter via DexScreener
+    try {
+      const dexRes = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${mint}`);
+      const dexData = await dexRes.json();
+      const pair = dexData?.pairs?.[0];
+      if (pair) {
+        // Age filter
+        const pairCreated = pair.pairCreatedAt ? new Date(pair.pairCreatedAt).getTime() : 0;
+        if (pairCreated > 0) {
+          const ageMinutes = (Date.now() - pairCreated) / 60000;
+          if (settings.minTokenAgeMinutes && ageMinutes < settings.minTokenAgeMinutes) {
+            console.log(`[Scout] Skip ${symbol}: too young (${Math.round(ageMinutes)}m < ${settings.minTokenAgeMinutes}m)`);
+            continue;
+          }
+          if (settings.maxTokenAgeHours && ageMinutes > settings.maxTokenAgeHours * 60) {
+            continue; // silently skip old tokens
+          }
+        }
+        // Market cap filter
+        const mcap = pair.marketCap || pair.fdv || 0;
+        if (settings.minMarketCapUsd && mcap > 0 && mcap < settings.minMarketCapUsd) {
+          console.log(`[Scout] Skip ${symbol}: mcap $${mcap} < $${settings.minMarketCapUsd}`);
+          continue;
+        }
+        if (settings.maxMarketCapUsd && mcap > settings.maxMarketCapUsd) {
+          continue;
+        }
+      }
+    } catch {}
+
+    // Score token (intel.py + enrichment data)
+    const [scoreResult, enrichment] = await Promise.all([
+      intel.scoreToken(mint, symbol).catch(() => ({ score: 0 })),
+      dataSources.enrichToken(mint, symbol).catch(() => ({ enrichmentScore: 0 }))
+    ]);
+
+    // Combined score: 60% intel + 40% enrichment
+    const intelScore = scoreResult?.score || 0;
+    const enrichScore = enrichment?.enrichmentScore || 0;
+    const score = Math.round(intelScore * 0.6 + enrichScore * 0.4);
 
     if (score < settings.minIntelScore) {
-      console.log(`[Scout] Skip ${symbol}: score ${score} < ${settings.minIntelScore}`);
+      console.log(`[Scout] Skip ${symbol}: score ${score} (intel:${intelScore} enrich:${enrichScore}) < ${settings.minIntelScore}`);
       continue;
     }
 
@@ -229,6 +333,7 @@ async function scout(userId, settings, positions) {
       });
 
       logTrade(userId, { type: 'BUY', symbol, mint, solAmount: solToSpend, score, signature: result.signature, entryPrice, explanation: 'Generating...' });
+      notifier.notifyBuy({ userId, symbol, score, solAmount: solToSpend, signature: result.signature });
       console.log(`[Agent] ✅ BUY ${symbol} — sig: ${result.signature?.slice(0, 20)}...`);
       break; // one buy per tick
     } catch (err) {
@@ -291,6 +396,7 @@ async function monitorPositions(userId, userPositions, settings, allPositions) {
         });
 
         logTrade(userId, { type: 'SELL', symbol: pos.symbol, mint, reason, pricePct, pnlSol, signature: result.signature, explanation: 'Generating...' });
+        notifier.notifySell({ userId, symbol: pos.symbol, reason, pnlSol, pnlPct: pricePct, signature: result.signature });
         console.log(`[Agent] ✅ SELL ${pos.symbol} — P&L: ${pnlSol >= 0 ? '+' : ''}${pnlSol.toFixed(4)} SOL`);
       } catch (err) {
         console.error(`[Agent] Sell failed for ${pos.symbol}:`, err.message);

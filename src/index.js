@@ -58,5 +58,5 @@ app.listen(PORT, () => {
 
   // Start trading agent (60s interval)
   const { start } = require('./bot/agent');
-  start(60000);
+  start(15000);
 });

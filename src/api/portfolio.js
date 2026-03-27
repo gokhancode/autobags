@@ -103,4 +103,21 @@ router.get('/:userId', async (req, res) => {
   });
 });
 
+// GET /api/portfolio/:userId/equity — equity curve data
+router.get('/:userId/equity', async (req, res) => {
+  const { userId } = req.params;
+  const period = req.query.period || '7d'; // 1d, 7d, 30d
+  const now = Date.now();
+  const sinceMap = { '1d': now - 86400000, '7d': now - 7*86400000, '30d': now - 30*86400000 };
+  const since = sinceMap[period] || sinceMap['7d'];
+
+  try {
+    const { getCurve } = require('../bot/equity-tracker');
+    const curve = getCurve(userId, since);
+    res.json({ success: true, userId, period, points: curve });
+  } catch (e) {
+    res.json({ success: true, userId, period, points: [] });
+  }
+});
+
 module.exports = router;
