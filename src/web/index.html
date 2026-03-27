@@ -20,6 +20,23 @@
       --muted:    #6b7280;
       --mono:     'Space Mono', monospace;
     }
+    [data-theme="light"] {
+      --bg:       #f8f9fb;
+      --surface:  #ffffff;
+      --border:   #e2e5ea;
+      --accent:   #7c3aed;
+      --accent2:  #6d28d9;
+      --green:    #16a34a;
+      --red:      #dc2626;
+      --text:     #111827;
+      --muted:    #6b7280;
+    }
+    [data-theme="light"] nav { background: rgba(248,249,251,0.92); }
+    [data-theme="light"] .hero { background: radial-gradient(ellipse 60% 40% at 50% 0%, rgba(124,58,237,0.08) 0%, transparent 70%); }
+    [data-theme="light"] .badge { background: rgba(124,58,237,0.08); border-color: rgba(124,58,237,0.2); }
+    [data-theme="light"] .price-bar { background: rgba(124,58,237,0.03); }
+    .theme-toggle { background: none; border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; cursor: pointer; font-size: 16px; line-height: 1; transition: all .2s; }
+    .theme-toggle:hover { border-color: var(--accent); }
     body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
 
     /* ── NAV ── */
@@ -154,6 +171,7 @@
   <div class="nav-links">
     <a href="#how-it-works">How it works</a>
     <a href="#features">Features</a>
+    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode" id="theme-btn">🌙</button>
     <a href="#" class="nav-cta" onclick="openModal('login'); return false;">Log in</a>
     <a href="#" class="btn btn-primary" style="padding:10px 20px; font-size:13px;" onclick="openModal('signup'); return false;">Get started</a>
   </div>
@@ -349,6 +367,20 @@
 </footer>
 
 <script>
+  // Theme
+  function toggleTheme() {
+    const current = document.documentElement.getAttribute('data-theme');
+    const next = current === 'light' ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('autobags_theme', next);
+    document.getElementById('theme-btn').textContent = next === 'light' ? '☀️' : '🌙';
+  }
+  (function initTheme() {
+    const t = localStorage.getItem('autobags_theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', t);
+    document.getElementById('theme-btn').textContent = t === 'light' ? '☀️' : '🌙';
+  })();
+
   const BASE = window.location.pathname.startsWith('/autobags') ? '/autobags' : '';
   const API  = BASE;
 
