@@ -29,6 +29,7 @@ app.use(express.static(path.join(__dirname, 'web')));
   app.use(`${prefix}/api/fees`,        require('./api/fees'));
   app.use(`${prefix}/api/launch`,      require('./api/launch'));
   app.use(`${prefix}/api/narratives`,  require('./api/narratives'));
+  app.use(`${prefix}/api/sim`,         require('./api/sim'));
 });
 
 // Global error handler
@@ -62,7 +63,11 @@ const PORT = process.env.PORT || 3500;
 app.listen(PORT, () => {
   console.log(`🤖 AUTOBAGS running on http://localhost:${PORT}`);
 
-  // Start trading agent (60s interval)
+  // Start trading agent (15s interval)
   const { start } = require('./bot/agent');
   start(15000);
+
+  // Start paper trading simulator ($1000 high-freq)
+  const sim = require('./bot/simulator');
+  sim.start(15000);
 });
