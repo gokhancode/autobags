@@ -304,20 +304,42 @@ async function scout(userId, settings, positions) {
       const result = await executeSwap(userId, SOL_MINT, mint, lamports, settings.slippageBps);
       const entryPrice = await getTokenPrice(mint);
 
-      // Record position
+      // Record position (accumulate if already holding same token)
       if (!positions[userId]) positions[userId] = {};
-      positions[userId][mint] = {
-        symbol,
-        mint,
-        entryPrice,
-        entryPriceSOL: solToSpend,
-        tokensReceived: result.outAmount,
-        solSpent: solToSpend,
-        entryTime: new Date().toISOString(),
-        score,
-        partialExited: false,
-        signature: result.signature
-      };
+      const existing = positions[userId][mint];
+      if (existing) {
+        // Accumulate — average entry price, sum tokens + SOL spent
+        const oldTokens = BigInt(existing.tokensReceived);
+        const newTokens = BigInt(result.outAmount);
+        const totalTokens = oldTokens + newTokens;
+        const totalSol = existing.solSpent + solToSpend;
+        // Weighted average entry price
+        const avgEntry = existing.entryPrice && entryPrice
+          ? (existing.entryPrice * existing.solSpent + entryPrice * solToSpend) / totalSol
+          : entryPrice || existing.entryPrice;
+        positions[userId][mint] = {
+          ...existing,
+          entryPrice: avgEntry,
+          entryPriceSOL: totalSol,
+          tokensReceived: totalTokens.toString(),
+          solSpent: totalSol,
+          score: Math.max(existing.score, score),
+          signature: result.signature
+        };
+      } else {
+        positions[userId][mint] = {
+          symbol,
+          mint,
+          entryPrice,
+          entryPriceSOL: solToSpend,
+          tokensReceived: result.outAmount,
+          solSpent: solToSpend,
+          entryTime: new Date().toISOString(),
+          score,
+          partialExited: false,
+          signature: result.signature
+        };
+      }
 
       // Generate AI explanation async
       explainer.queueExplanation({
