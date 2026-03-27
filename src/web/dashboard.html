@@ -320,8 +320,8 @@
   <div class="panel">
     <div class="panel-title">📊 Recent Trades</div>
     <table class="trades-table">
-      <thead><tr><th>Token</th><th>Type</th><th>Amount</th><th>P&L</th><th>Time</th><th></th></tr></thead>
-      <tbody id="trades-body"><tr><td colspan="6" class="empty-state">No trades yet</td></tr></tbody>
+      <thead><tr><th>Token</th><th>Type</th><th>Amount</th><th>P&L</th><th>Time</th><th></th><th>Tx</th></tr></thead>
+      <tbody id="trades-body"><tr><td colspan="7" class="empty-state">No trades yet</td></tr></tbody>
     </table>
   </div>
 
@@ -421,8 +421,9 @@
             <td class="${(t.pnlSol||0) > 0 ? 'green' : (t.pnlSol||0) < 0 ? 'red' : ''}" style="font-family:var(--mono);">${t.pnlSol != null ? (t.pnlSol > 0 ? '+' : '') + parseFloat(t.pnlSol).toFixed(4) : '—'}</td>
             <td style="color:var(--muted);">${new Date(t.timestamp).toLocaleString()}</td>
             <td>${hasExplanation ? `<button class="explain-toggle" onclick="toggleExplain(${i})">🤖 Why?</button>` : (t.explanation === 'Generating...' ? '<span style="font-size:10px;color:var(--muted);">⏳</span>' : '')}</td>
+            <td>${t.signature ? `<a href="https://solscan.io/tx/${t.signature}" target="_blank" rel="noopener" style="color:var(--accent); font-size:11px; text-decoration:none;" title="${t.signature}">🔗</a>` : '—'}</td>
           </tr>
-          ${hasExplanation ? `<tr class="explain-row" id="explain-${i}" style="display:none;"><td colspan="6" class="trade-explanation"><span class="ai-badge">🤖 AI</span>${t.explanation}</td></tr>` : ''}`;
+          ${hasExplanation ? `<tr class="explain-row" id="explain-${i}" style="display:none;"><td colspan="7" class="trade-explanation"><span class="ai-badge">🤖 AI</span>${t.explanation}</td></tr>` : ''}`;
         }).join('');
       }
     } catch {}
