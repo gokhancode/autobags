@@ -22,7 +22,15 @@ app.use(express.static(path.join(__dirname, 'web')));
   app.use(`${prefix}/api/stats`,       require('./api/stats'));
 });
 
-// Fallback to index.html
+// Dashboard route
+app.get('/dashboard', (req, res) => {
+  res.sendFile(path.join(__dirname, 'web', 'dashboard.html'));
+});
+app.get('/autobags/dashboard', (req, res) => {
+  res.sendFile(path.join(__dirname, 'web', 'dashboard.html'));
+});
+
+// Fallback to index.html (landing page)
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'web', 'index.html'));
 });

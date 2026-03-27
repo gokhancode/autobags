@@ -8,7 +8,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     :root {
       --bg:       #0a0a0f;
       --surface:  #12121a;
@@ -21,7 +20,6 @@
       --muted:    #6b7280;
       --mono:     'Space Mono', monospace;
     }
-
     body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
 
     /* ── NAV ── */
@@ -33,12 +31,14 @@
     }
     .logo { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; }
     .logo span { color: var(--accent2); }
-    nav a { color: var(--muted); text-decoration: none; font-size: 14px; margin-left: 24px; transition: color .2s; }
+    .nav-links { display: flex; align-items: center; gap: 24px; }
+    nav a { color: var(--muted); text-decoration: none; font-size: 14px; transition: color .2s; }
     nav a:hover { color: var(--text); }
+    .nav-cta { color: var(--accent2) !important; font-weight: 600; }
 
     /* ── HERO ── */
     .hero {
-      text-align: center; padding: 100px 24px 80px;
+      text-align: center; padding: 120px 24px 100px;
       background: radial-gradient(ellipse 60% 40% at 50% 0%, rgba(124,58,237,0.15) 0%, transparent 70%);
     }
     .badge {
@@ -47,9 +47,9 @@
       font-size: 12px; font-weight: 600; color: var(--accent2); margin-bottom: 24px;
       letter-spacing: 0.5px; text-transform: uppercase;
     }
-    h1 { font-size: clamp(36px, 6vw, 72px); font-weight: 800; line-height: 1.1; letter-spacing: -2px; margin-bottom: 20px; }
+    h1 { font-size: clamp(40px, 7vw, 80px); font-weight: 800; line-height: 1.05; letter-spacing: -2px; margin-bottom: 24px; }
     h1 em { font-style: normal; background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    .subtitle { font-size: 18px; color: var(--muted); max-width: 480px; margin: 0 auto 40px; line-height: 1.6; }
+    .subtitle { font-size: 18px; color: var(--muted); max-width: 520px; margin: 0 auto 48px; line-height: 1.7; }
 
     .cta-group { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
     .btn {
@@ -61,11 +61,26 @@
     .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
     .btn-outline:hover { border-color: var(--accent); color: var(--accent2); }
 
+    /* ── SOL PRICE BAR ── */
+    .price-bar { display: flex; align-items: center; justify-content: center; gap: 24px; padding: 10px 24px; background: rgba(124,58,237,0.06); font-size: 13px; font-family: var(--mono); flex-wrap: wrap; }
+    .price-bar .item { display: flex; align-items: center; gap: 8px; }
+    .price-bar .val { color: var(--text); font-weight: 700; }
+    .price-bar .change.up { color: var(--green); }
+    .price-bar .change.down { color: var(--red); }
+
+    /* ── TICKER ── */
+    .ticker-wrap { overflow: hidden; background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 10px 0; }
+    .ticker-track { display: flex; gap: 0; white-space: nowrap; animation: ticker 30s linear infinite; }
+    .ticker-track:hover { animation-play-state: paused; }
+    .ticker-item { display: inline-flex; align-items: center; gap: 8px; padding: 0 28px; font-size: 13px; font-family: var(--mono); border-right: 1px solid var(--border); }
+    .ticker-item .sym { color: var(--accent2); font-weight: 700; }
+    .ticker-item .lbl { color: var(--muted); font-size: 11px; }
+    @keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
     /* ── STATS BAR ── */
     .stats-bar {
-      display: flex; justify-content: center; gap: 48px; padding: 32px 24px;
-      border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
-      flex-wrap: wrap;
+      display: flex; justify-content: center; gap: 48px; padding: 40px 24px;
+      border-bottom: 1px solid var(--border); flex-wrap: wrap;
     }
     .stat { text-align: center; }
     .stat-value { font-size: 28px; font-weight: 800; color: var(--green); font-family: var(--mono); }
@@ -84,6 +99,15 @@
     .step-num { font-size: 13px; font-weight: 700; color: var(--accent2); font-family: var(--mono); margin-bottom: 12px; }
     .step h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
     .step p { font-size: 14px; color: var(--muted); line-height: 1.6; }
+
+    /* ── FEATURES ── */
+    .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; max-width: 1100px; margin: 0 auto; padding: 0 24px 80px; }
+    .feature {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 32px;
+    }
+    .feature .icon { font-size: 28px; margin-bottom: 16px; }
+    .feature h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+    .feature p { font-size: 14px; color: var(--muted); line-height: 1.7; }
 
     /* ── SIGN UP MODAL ── */
     .overlay {
@@ -110,90 +134,6 @@
     input:focus { border-color: var(--accent); }
     .modal .btn { width: 100%; margin-top: 8px; text-align: center; }
 
-    /* ── DASHBOARD ── */
-    #dashboard { display: none; max-width: 800px; margin: 48px auto; padding: 0 24px; }
-    .dash-header { margin-bottom: 32px; }
-    .dash-header h2 { font-size: 26px; font-weight: 800; }
-    .dash-header p { color: var(--muted); font-size: 14px; margin-top: 4px; }
-    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
-    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 24px; }
-    .card-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
-    .card-value { font-size: 24px; font-weight: 800; font-family: var(--mono); }
-    .card-value.green { color: var(--green); }
-    .card-value.red   { color: var(--red); }
-
-    .deposit-box {
-      background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 24px; margin-bottom: 24px;
-    }
-    .deposit-box h3 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
-    .deposit-box p  { font-size: 13px; color: var(--muted); margin-bottom: 16px; }
-    .address-row { display: flex; gap: 10px; align-items: center; }
-    .address {
-      flex: 1; padding: 10px 14px; background: var(--bg); border: 1px solid var(--border);
-      border-radius: 8px; font-family: var(--mono); font-size: 12px; color: var(--accent2);
-      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    }
-    .copy-btn {
-      padding: 10px 16px; background: var(--accent); border: none; border-radius: 8px;
-      color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
-    }
-    .copy-btn:hover { background: var(--accent2); }
-
-    .trades-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    .trades-table th { text-align: left; padding: 10px 12px; color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--border); }
-    .trades-table td { padding: 12px; border-bottom: 1px solid rgba(30,30,46,0.5); }
-    .trades-table tr:last-child td { border-bottom: none; }
-    .pill { padding: 3px 10px; border-radius: 99px; font-size: 11px; font-weight: 700; }
-    .pill.buy  { background: rgba(34,197,94,0.15); color: var(--green); }
-    .pill.sell { background: rgba(239,68,68,0.15);  color: var(--red); }
-
-    /* ── SETTINGS ── */
-    .settings-box { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 24px; margin-bottom: 24px; }
-    .settings-box h3 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
-    .settings-box p  { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
-    .mode-tabs { display: flex; gap: 8px; margin-bottom: 24px; }
-    .mode-tab { flex: 1; padding: 10px; border-radius: 10px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-weight: 700; font-size: 14px; cursor: pointer; transition: all .2s; text-align: center; }
-    .mode-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
-    .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid var(--border); }
-    .toggle-row:last-child { border-bottom: none; }
-    .toggle-row label { font-size: 14px; font-weight: 600; }
-    .toggle-row small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
-    .toggle { position: relative; width: 44px; height: 24px; }
-    .toggle input { opacity: 0; width: 0; height: 0; }
-    .slider-toggle { position: absolute; inset: 0; background: var(--border); border-radius: 99px; cursor: pointer; transition: .3s; }
-    .slider-toggle:before { content: ''; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px; background: white; border-radius: 50%; transition: .3s; }
-    .toggle input:checked + .slider-toggle { background: var(--green); }
-    .toggle input:checked + .slider-toggle:before { transform: translateX(20px); }
-    .risk-group { display: flex; gap: 8px; margin-top: 8px; }
-    .risk-btn { flex: 1; padding: 8px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-size: 13px; font-weight: 600; cursor: pointer; transition: all .2s; }
-    .risk-btn.active.low    { background: rgba(34,197,94,0.15);  color: var(--green); border-color: var(--green); }
-    .risk-btn.active.medium { background: rgba(234,179,8,0.15);  color: #eab308;      border-color: #eab308; }
-    .risk-btn.active.high   { background: rgba(239,68,68,0.15);  color: var(--red);   border-color: var(--red); }
-    .range-row { margin: 12px 0; }
-    .range-row label { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
-    .range-row label span { color: var(--accent2); font-family: var(--mono); }
-    input[type=range] { width: 100%; accent-color: var(--accent); }
-    .adv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    @media(max-width:500px) { .adv-grid { grid-template-columns: 1fr; } }
-    .save-btn { width: 100%; margin-top: 20px; }
-    .saved-msg { text-align: center; color: var(--green); font-size: 13px; margin-top: 8px; display: none; }
-
-    /* ── TICKER ── */
-    .ticker-wrap { overflow: hidden; background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 10px 0; }
-    .ticker-track { display: flex; gap: 0; white-space: nowrap; animation: ticker 30s linear infinite; }
-    .ticker-track:hover { animation-play-state: paused; }
-    .ticker-item { display: inline-flex; align-items: center; gap: 8px; padding: 0 28px; font-size: 13px; font-family: var(--mono); border-right: 1px solid var(--border); }
-    .ticker-item .sym { color: var(--accent2); font-weight: 700; }
-    .ticker-item .lbl { color: var(--muted); font-size: 11px; }
-    @keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-
-    /* ── SOL PRICE BAR ── */
-    .price-bar { display: flex; align-items: center; justify-content: center; gap: 24px; padding: 10px 24px; background: rgba(124,58,237,0.06); font-size: 13px; font-family: var(--mono); flex-wrap: wrap; }
-    .price-bar .item { display: flex; align-items: center; gap: 8px; }
-    .price-bar .val { color: var(--text); font-weight: 700; }
-    .price-bar .change.up { color: var(--green); }
-    .price-bar .change.down { color: var(--red); }
-
     /* ── FOOTER ── */
     footer { text-align: center; padding: 40px 24px; color: var(--muted); font-size: 13px; border-top: 1px solid var(--border); margin-top: 80px; }
     footer a { color: var(--muted); text-decoration: none; }
@@ -202,6 +142,7 @@
     @media (max-width: 600px) {
       nav { padding: 16px 20px; }
       .stats-bar { gap: 24px; }
+      .hero { padding: 80px 20px 60px; }
     }
   </style>
 </head>
@@ -209,23 +150,14 @@
 
 <!-- NAV -->
 <nav>
-  <div class="logo">AUTO<span>BAGS</span></div>
-  <div>
+  <a href="/" style="text-decoration:none;"><div class="logo">AUTO<span>BAGS</span></div></a>
+  <div class="nav-links">
     <a href="#how-it-works">How it works</a>
-    <a href="#" onclick="openModal(); return false;" style="color:var(--accent2); font-weight:600;">Get started →</a>
+    <a href="#features">Features</a>
+    <a href="#" class="nav-cta" onclick="openModal('login'); return false;">Log in</a>
+    <a href="#" class="btn btn-primary" style="padding:10px 20px; font-size:13px;" onclick="openModal('signup'); return false;">Get started</a>
   </div>
 </nav>
-
-<!-- HERO -->
-<section class="hero">
-  <div class="badge">🤖 Built on Bags.fm · Solana</div>
-  <h1>Your bags,<br/><em>on autopilot.</em></h1>
-  <p class="subtitle">An AI trading agent that scouts, scores, and swaps Solana memecoins for you — 24/7. Your wallet, your keys, your gains.</p>
-  <div class="cta-group">
-    <a href="#" class="btn btn-primary" onclick="openModal(); return false;">Start trading free</a>
-    <a href="#how-it-works" class="btn btn-outline">How it works</a>
-  </div>
-</section>
 
 <!-- SOL PRICE BAR -->
 <div class="price-bar" id="price-bar">
@@ -234,6 +166,17 @@
   <div class="item">🔥 <span class="lbl">Tokens launched</span> <span class="val" id="pb-launches">—</span></div>
   <div class="item">🤖 <span class="lbl">AUTOBAGS trades</span> <span class="val" id="pb-trades">—</span></div>
 </div>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="badge">🤖 AI-Powered · Built on Bags.fm · Solana</div>
+  <h1>Your bags,<br/><em>on autopilot.</em></h1>
+  <p class="subtitle">An AI trading agent that scouts, scores, and swaps Solana memecoins for you — 24/7. Your wallet, your keys, your gains.</p>
+  <div class="cta-group">
+    <a href="#" class="btn btn-primary" onclick="openModal('signup'); return false;">Start trading →</a>
+    <a href="#how-it-works" class="btn btn-outline">How it works</a>
+  </div>
+</section>
 
 <!-- LIVE TOKEN TICKER -->
 <div class="ticker-wrap">
@@ -270,39 +213,82 @@
     <div class="step">
       <div class="step-num">01 /</div>
       <h3>Sign up</h3>
-      <p>Create an account. A secure Solana wallet is generated just for you — encrypted and stored on our servers.</p>
+      <p>Create an account with 2FA security. A Solana wallet is generated instantly — encrypted and stored on our servers.</p>
     </div>
     <div class="step">
       <div class="step-num">02 /</div>
       <h3>Deposit SOL</h3>
-      <p>Send SOL to your deposit address. That's your trading capital. Start with any amount.</p>
+      <p>Send SOL to your personal deposit address. Any amount works — your trading capital, your call.</p>
     </div>
     <div class="step">
       <div class="step-num">03 /</div>
       <h3>AI scouts tokens</h3>
-      <p>Our agent scans trending tokens every minute — filtering by safety score, liquidity, volume, and momentum.</p>
+      <p>Our agent scans trending tokens every 60 seconds — filtering by safety score, liquidity, volume, and momentum.</p>
     </div>
     <div class="step">
       <div class="step-num">04 /</div>
       <h3>Collect bags</h3>
-      <p>The bot buys, manages positions, and exits at profit targets. You watch your balance grow.</p>
+      <p>The bot buys, manages positions with smart exits, and takes profits automatically. Watch from your dashboard.</p>
     </div>
   </div>
 </section>
 
-<!-- SIGN UP MODAL -->
+<!-- FEATURES -->
+<div id="features">
+  <div class="section-title" style="padding-top:40px;">Built different</div>
+  <div class="section-sub">Not another copy-trade bot</div>
+  <div class="features">
+    <div class="feature">
+      <div class="icon">🧠</div>
+      <h3>Intel scoring</h3>
+      <p>6-signal scoring engine: RugCheck safety, liquidity depth, volume ratios, holder distribution, social presence, and momentum — every token is scored 0-100 before entry.</p>
+    </div>
+    <div class="feature">
+      <div class="icon">🔒</div>
+      <h3>Your keys, always</h3>
+      <p>AES-256-GCM encrypted wallets. Export your private key anytime with 2FA verification. Take full self-custody whenever you want.</p>
+    </div>
+    <div class="feature">
+      <div class="icon">⚡</div>
+      <h3>Smart exits</h3>
+      <p>Partial profit taking, momentum exits, whale dump detection, and configurable stop-loss / take-profit. No bag-holding.</p>
+    </div>
+    <div class="feature">
+      <div class="icon">💰</div>
+      <h3>No subscription</h3>
+      <p>Only pay when the bot trades — 1.5% per swap via Bags.fm fee sharing. Zero monthly fees. Zero setup costs.</p>
+    </div>
+    <div class="feature">
+      <div class="icon">🎛️</div>
+      <h3>Your rules</h3>
+      <p>Basic mode with risk presets (Low/Medium/High) or Advanced mode with full control over every parameter.</p>
+    </div>
+    <div class="feature">
+      <div class="icon">📊</div>
+      <h3>Live dashboard</h3>
+      <p>Real-time portfolio tracking, trade history, P&L, and bot status — all on one clean dashboard.</p>
+    </div>
+  </div>
+</div>
+
+<!-- CTA SECTION -->
+<section style="text-align:center; padding:80px 24px;">
+  <div class="section-title">Ready to automate your bags?</div>
+  <div class="section-sub" style="margin-bottom:32px;">Join now. No subscription. No credit card.</div>
+  <a href="#" class="btn btn-primary" onclick="openModal('signup'); return false;" style="font-size:17px; padding:16px 36px;">Start trading →</a>
+</section>
+
+<!-- SIGN UP / LOGIN MODAL -->
 <div class="overlay" id="modal">
   <div class="modal">
     <button class="modal-close" onclick="closeModal()">×</button>
-    <h2>Get started</h2>
-    <p>Create your account. Takes 10 seconds.</p>
-    <!-- Step 1: signup / login tabs -->
+    <h2 id="modal-title">Get started</h2>
+    <p id="modal-desc">Create your account. Takes 10 seconds.</p>
     <div id="auth-tabs" style="display:flex; gap:8px; margin-bottom:24px;">
       <button id="tab-signup" onclick="switchTab('signup')" style="flex:1; padding:8px; border-radius:8px; border:none; background:var(--accent); color:#fff; font-weight:700; cursor:pointer;">Sign up</button>
       <button id="tab-login"  onclick="switchTab('login')"  style="flex:1; padding:8px; border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--muted); font-weight:700; cursor:pointer;">Log in</button>
     </div>
 
-    <!-- Sign up form -->
     <div id="signup-form">
       <div class="form-group">
         <label>Username</label>
@@ -319,7 +305,6 @@
       <button class="btn btn-primary" onclick="signup()">Create account →</button>
     </div>
 
-    <!-- Login form -->
     <div id="login-form" style="display:none;">
       <div class="form-group">
         <label>Username</label>
@@ -336,7 +321,6 @@
       <button class="btn btn-primary" onclick="login()">Log in →</button>
     </div>
 
-    <!-- Step 2: Scan 2FA QR -->
     <div id="setup-2fa" style="display:none; text-align:center;">
       <h3 style="margin-bottom:8px;">Set up 2FA</h3>
       <p style="color:var(--muted); font-size:13px; margin-bottom:16px;">Scan with Google Authenticator or Authy</p>
@@ -348,176 +332,13 @@
       <button class="btn btn-primary" onclick="verify2FA()">Verify & activate →</button>
     </div>
 
-    <!-- Step 3: Done -->
     <div id="signup-success" style="display:none; text-align:center;">
       <div style="font-size:48px; margin-bottom:16px;">✅</div>
       <h3 style="margin-bottom:8px;">You're in!</h3>
       <p style="color:var(--muted); font-size:13px; margin-bottom:20px;">Wallet ready. Send SOL to start trading.</p>
-      <div class="address" id="modal-address" style="margin-bottom:16px;"></div>
-      <button class="btn btn-primary" onclick="closeModal(); showDashboard()">View dashboard →</button>
+      <div style="padding:10px 14px; background:var(--bg); border:1px solid var(--border); border-radius:8px; font-family:var(--mono); font-size:12px; color:var(--accent2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-bottom:16px;" id="modal-address"></div>
+      <button class="btn btn-primary" onclick="closeModal(); window.location.href='/dashboard';">Open dashboard →</button>
     </div>
-  </div>
-</div>
-
-<!-- DASHBOARD (shown after login) -->
-<div id="dashboard">
-  <div class="dash-header" style="display:flex; justify-content:space-between; align-items:flex-start;">
-    <div>
-      <h2>Dashboard</h2>
-      <p id="dash-userid" style="font-family:var(--mono); color:var(--accent2);"></p>
-    </div>
-    <button onclick="logout()" style="padding:8px 16px; background:transparent; border:1px solid var(--border); border-radius:8px; color:var(--muted); font-size:13px; cursor:pointer;">Log out</button>
-  </div>
-
-  <div class="cards">
-    <div class="card">
-      <div class="card-label">Total Worth</div>
-      <div class="card-value" id="d-worth">—</div>
-    </div>
-    <div class="card">
-      <div class="card-label">SOL Balance</div>
-      <div class="card-value" id="d-balance">—</div>
-    </div>
-    <div class="card">
-      <div class="card-label">Holdings Value</div>
-      <div class="card-value" id="d-holdings">—</div>
-    </div>
-    <div class="card">
-      <div class="card-label">Total P&L</div>
-      <div class="card-value" id="d-pnl">—</div>
-    </div>
-    <div class="card">
-      <div class="card-label">Total trades</div>
-      <div class="card-value" id="d-trades">—</div>
-    </div>
-    <div class="card">
-      <div class="card-label">Win rate</div>
-      <div class="card-value" id="d-winrate">—</div>
-    </div>
-  </div>
-
-  <div class="deposit-box">
-    <h3>Your deposit address</h3>
-    <p>Send SOL here to fund your trading account. Funds are reflected within ~30 seconds.</p>
-    <div class="address-row">
-      <div class="address" id="d-address"></div>
-      <button class="copy-btn" onclick="copyAddress()">Copy</button>
-    </div>
-  </div>
-
-  <!-- Bot Settings -->
-  <div class="settings-box">
-    <h3>⚙️ Bot settings</h3>
-    <p>Configure how the AI agent trades on your behalf.</p>
-
-    <!-- Bot on/off -->
-    <div class="toggle-row">
-      <div>
-        <label>Bot active</label>
-        <small>Agent is actively scouting and trading</small>
-      </div>
-      <label class="toggle">
-        <input type="checkbox" id="s-active" onchange="saveSetting('active', this.checked)" />
-        <span class="slider-toggle"></span>
-      </label>
-    </div>
-
-    <!-- Mode tabs -->
-    <div style="margin-top:20px; margin-bottom:8px; font-size:13px; font-weight:600; color:var(--muted);">MODE</div>
-    <div class="mode-tabs">
-      <button class="mode-tab active" id="tab-basic" onclick="switchMode('basic')">🟢 Basic</button>
-      <button class="mode-tab" id="tab-advanced" onclick="switchMode('advanced')">⚡ Advanced</button>
-    </div>
-
-    <!-- Basic mode -->
-    <div id="mode-basic">
-      <div style="font-size:14px; color:var(--muted); margin-bottom:16px;">Set your risk appetite. The bot handles everything else automatically.</div>
-      <div style="font-size:13px; font-weight:600; margin-bottom:8px;">Risk level</div>
-      <div class="risk-group">
-        <button class="risk-btn low"    id="risk-low"    onclick="setRisk('low')">🟢 Low<br/><small style="font-weight:400">-5% SL / +15% TP</small></button>
-        <button class="risk-btn medium" id="risk-medium" onclick="setRisk('medium')">🟡 Medium<br/><small style="font-weight:400">-8% SL / +25% TP</small></button>
-        <button class="risk-btn high"   id="risk-high"   onclick="setRisk('high')">🔴 High<br/><small style="font-weight:400">-12% SL / +40% TP</small></button>
-      </div>
-    </div>
-
-    <!-- Advanced mode -->
-    <div id="mode-advanced" style="display:none;">
-      <div class="adv-grid">
-        <div>
-          <div class="range-row">
-            <label>Stop loss <span id="v-sl">8</span>%</label>
-            <input type="range" id="s-sl" min="1" max="50" value="8" oninput="document.getElementById('v-sl').textContent=this.value" />
-          </div>
-          <div class="range-row">
-            <label>Take profit <span id="v-tp">25</span>%</label>
-            <input type="range" id="s-tp" min="5" max="200" value="25" oninput="document.getElementById('v-tp').textContent=this.value" />
-          </div>
-          <div class="range-row">
-            <label>Partial exit at <span id="v-pe">10</span>%</label>
-            <input type="range" id="s-pe" min="5" max="50" value="10" oninput="document.getElementById('v-pe').textContent=this.value" />
-            <small style="color:var(--muted); font-size:11px;">Secure 30% of position at this gain</small>
-          </div>
-        </div>
-        <div>
-          <div class="range-row">
-            <label>Max deploy <span id="v-sol">80</span>% of balance</label>
-            <input type="range" id="s-sol" min="10" max="100" value="80" oninput="document.getElementById('v-sol').textContent=this.value" />
-          </div>
-          <div class="range-row">
-            <label>Min intel score <span id="v-score">65</span>/100</label>
-            <input type="range" id="s-score" min="0" max="100" value="65" oninput="document.getElementById('v-score').textContent=this.value" />
-            <small style="color:var(--muted); font-size:11px;">Higher = safer picks, fewer trades</small>
-          </div>
-          <div class="range-row">
-            <label>Slippage <span id="v-slip">100</span> bps</label>
-            <input type="range" id="s-slip" min="10" max="1000" step="10" value="100" oninput="document.getElementById('v-slip').textContent=this.value" />
-          </div>
-        </div>
-      </div>
-      <div class="toggle-row" style="margin-top:4px;">
-        <div><label>Max positions</label><small>Simultaneous open trades</small></div>
-        <select id="s-maxpos" style="background:var(--bg); border:1px solid var(--border); color:var(--text); padding:6px 10px; border-radius:8px;">
-          <option value="1">1 (recommended)</option>
-          <option value="2">2</option>
-          <option value="3">3</option>
-        </select>
-      </div>
-    </div>
-
-    <button class="btn btn-primary save-btn" onclick="saveSettings()">Save settings</button>
-    <div class="saved-msg" id="saved-msg">✅ Settings saved</div>
-  </div>
-
-  <!-- Export wallet -->
-  <div class="deposit-box" id="export-box">
-    <h3>🔐 Export private key</h3>
-    <p>Take self-custody of your wallet. Requires 2FA verification.</p>
-    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-      <input type="text" id="export-totp" placeholder="6-digit 2FA code" maxlength="6" inputmode="numeric" style="max-width:180px;" />
-      <button class="copy-btn" onclick="exportKey()" style="background:var(--red);">Export key</button>
-    </div>
-    <div id="export-result" style="display:none; margin-top:16px;">
-      <div style="background:rgba(239,68,68,0.1); border:1px solid var(--red); border-radius:8px; padding:12px; font-size:12px; color:var(--red); margin-bottom:8px;">⚠️ Keep this private. Anyone with it controls your wallet.</div>
-      <div class="address" id="export-key" style="color:var(--red);"></div>
-    </div>
-  </div>
-
-  <div class="card" style="margin-bottom:24px;">
-    <div class="card-label" style="margin-bottom:16px;">Recent trades</div>
-    <table class="trades-table">
-      <thead>
-        <tr>
-          <th>Token</th>
-          <th>Type</th>
-          <th>Amount</th>
-          <th>P&L</th>
-          <th>Time</th>
-        </tr>
-      </thead>
-      <tbody id="trades-body">
-        <tr><td colspan="5" style="color:var(--muted); padding:24px; text-align:center;">No trades yet</td></tr>
-      </tbody>
-    </table>
   </div>
 </div>
 
@@ -528,12 +349,8 @@
 </footer>
 
 <script>
-  // Detect base path — works whether served at /autobags or root
-  // Works on autobags.io (root) and IP/autobags (subpath)
   const BASE = window.location.pathname.startsWith('/autobags') ? '/autobags' : '';
-  const API  = BASE; // empty string = relative to origin (correct for autobags.io)
-  let currentUser = null;
-  let authToken   = null;
+  const API  = BASE;
 
   function switchTab(tab) {
     document.getElementById('signup-form').style.display = tab === 'signup' ? 'block' : 'none';
@@ -542,275 +359,86 @@
     document.getElementById('tab-signup').style.color      = tab === 'signup' ? '#fff' : 'var(--muted)';
     document.getElementById('tab-login').style.background  = tab === 'login'  ? 'var(--accent)' : 'transparent';
     document.getElementById('tab-login').style.color       = tab === 'login'  ? '#fff' : 'var(--muted)';
+    document.getElementById('modal-title').textContent = tab === 'signup' ? 'Get started' : 'Welcome back';
+    document.getElementById('modal-desc').textContent  = tab === 'signup' ? 'Create your account. Takes 10 seconds.' : 'Log in to your dashboard.';
   }
 
-  // ── Modal ──────────────────────────────────────────────────────────────────
-  function openModal()  { document.getElementById('modal').classList.add('active'); }
+  function openModal(tab)  { switchTab(tab || 'signup'); document.getElementById('modal').classList.add('active'); }
   function closeModal() { document.getElementById('modal').classList.remove('active'); }
   document.getElementById('modal').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
 
-  // ── Sign up ────────────────────────────────────────────────────────────────
   async function signup() {
     const userId   = document.getElementById('inp-userid').value.trim();
     const password = document.getElementById('inp-password').value;
     const email    = document.getElementById('inp-email').value.trim();
     if (!userId)          { alert('Enter a username'); return; }
     if (password.length < 8) { alert('Password must be 8+ characters'); return; }
-
     const btn = document.querySelector('#signup-form .btn');
     btn.textContent = 'Creating...'; btn.disabled = true;
-
     try {
-      const res  = await fetch(`${API}/api/auth/signup`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, password, email })
-      });
+      const res  = await fetch(`${API}/api/auth/signup`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId, password, email }) });
       const data = await res.json();
       if (!res.ok) { alert(data.error || 'Error'); btn.textContent = 'Create account →'; btn.disabled = false; return; }
-
-      currentUser = { userId, wallet: data.wallet.publicKey };
-
-      // Show 2FA setup
+      localStorage.setItem('autobags_pending', JSON.stringify({ userId, wallet: data.wallet.publicKey }));
       document.getElementById('auth-tabs').style.display  = 'none';
       document.getElementById('signup-form').style.display = 'none';
       document.getElementById('setup-2fa').style.display   = 'block';
       document.getElementById('qr-code').src = data.twoFactor.qrCode;
-    } catch (err) {
-      alert('Network error. Try again.');
-      btn.textContent = 'Create account →'; btn.disabled = false;
-    }
+    } catch (err) { alert('Network error.'); btn.textContent = 'Create account →'; btn.disabled = false; }
   }
 
   async function verify2FA() {
     const token = document.getElementById('inp-totp').value.trim();
-    if (!token || token.length !== 6) { alert('Enter the 6-digit code from your authenticator app'); return; }
-
+    const pending = JSON.parse(localStorage.getItem('autobags_pending') || '{}');
+    if (!token || token.length !== 6) { alert('Enter the 6-digit code'); return; }
     const btn = document.querySelector('#setup-2fa .btn');
     btn.textContent = 'Verifying...'; btn.disabled = true;
-
     try {
-      const res  = await fetch(`${API}/api/auth/verify-2fa`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: currentUser.userId, token })
-      });
+      const res  = await fetch(`${API}/api/auth/verify-2fa`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: pending.userId, token }) });
       const data = await res.json();
       if (!res.ok || !data.success) { alert(data.error || 'Invalid code'); btn.textContent = 'Verify & activate →'; btn.disabled = false; return; }
-
-      authToken = data.token;
-      localStorage.setItem('autobags_session', JSON.stringify({ userId: currentUser.userId, wallet: currentUser.wallet, token: authToken }));
-
-      document.getElementById('modal-address').textContent = currentUser.wallet;
+      localStorage.setItem('autobags_session', JSON.stringify({ userId: pending.userId, wallet: pending.wallet, token: data.token }));
+      localStorage.removeItem('autobags_pending');
+      document.getElementById('modal-address').textContent = pending.wallet;
       document.getElementById('setup-2fa').style.display     = 'none';
       document.getElementById('signup-success').style.display = 'block';
-    } catch (err) {
-      alert('Network error.'); btn.textContent = 'Verify & activate →'; btn.disabled = false;
-    }
+    } catch (err) { alert('Network error.'); btn.textContent = 'Verify & activate →'; btn.disabled = false; }
   }
 
-  // ── Login ──────────────────────────────────────────────────────────────────
   async function login() {
     const userId   = document.getElementById('inp-login-userid').value.trim();
     const password = document.getElementById('inp-login-password').value;
     const totpToken = document.getElementById('inp-login-totp').value.trim();
     if (!userId || !password) { alert('Enter username and password'); return; }
-
     const btn = document.querySelector('#login-form .btn');
     btn.textContent = 'Logging in...'; btn.disabled = true;
-
     try {
-      const res  = await fetch(`${API}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, password, totpToken: totpToken || undefined })
-      });
+      const res  = await fetch(`${API}/api/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId, password, totpToken: totpToken || undefined }) });
       const data = await res.json();
-
-      if (data.requires2FA) {
-        document.getElementById('login-2fa-group').style.display = 'block';
-        document.getElementById('inp-login-totp').focus();
-        btn.textContent = 'Log in →'; btn.disabled = false;
-        return;
-      }
+      if (data.requires2FA) { document.getElementById('login-2fa-group').style.display = 'block'; document.getElementById('inp-login-totp').focus(); btn.textContent = 'Log in →'; btn.disabled = false; return; }
       if (!res.ok || !data.success) { alert(data.error || 'Invalid credentials'); btn.textContent = 'Log in →'; btn.disabled = false; return; }
-
-      authToken   = data.token;
-      currentUser = { userId: data.userId, wallet: data.wallet };
-      localStorage.setItem('autobags_session', JSON.stringify({ userId: data.userId, wallet: data.wallet, token: authToken }));
-
-      closeModal();
-      showDashboard();
-    } catch (err) {
-      alert('Network error.'); btn.textContent = 'Log in →'; btn.disabled = false;
-    }
+      localStorage.setItem('autobags_session', JSON.stringify({ userId: data.userId, wallet: data.wallet, token: data.token }));
+      window.location.href = '/dashboard';
+    } catch (err) { alert('Network error.'); btn.textContent = 'Log in →'; btn.disabled = false; }
   }
 
-  // ── Export key ─────────────────────────────────────────────────────────────
-  async function exportKey() {
-    if (!authToken) { alert('Log in first'); return; }
-    const totpToken = document.getElementById('export-totp').value.trim();
-    if (!totpToken) { alert('Enter your 2FA code'); return; }
-
-    const res  = await fetch(`${API}/api/auth/export`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-      body: JSON.stringify({ totpToken })
-    });
-    const data = await res.json();
-    if (!res.ok || !data.success) { alert(data.error || 'Export failed'); return; }
-
-    document.getElementById('export-key').textContent = data.privateKey;
-    document.getElementById('export-result').style.display = 'block';
-  }
-
-  // ── Dashboard ──────────────────────────────────────────────────────────────
-  async function showDashboard() {
-    if (!currentUser) return;
-    document.getElementById('dashboard').style.display = 'block';
-    document.getElementById('dash-userid').textContent = `@${currentUser.userId}`;
-    document.getElementById('d-address').textContent = currentUser.wallet;
-
-    // Scroll to dashboard
-    document.getElementById('dashboard').scrollIntoView({ behavior: 'smooth' });
-
-    // Load portfolio + live balance
+  // If already logged in, show "Dashboard" link
+  const saved = localStorage.getItem('autobags_session');
+  if (saved) {
     try {
-      const res  = await fetch(`${API}/api/portfolio/${currentUser.userId}`);
-      const data = await res.json();
-      document.getElementById('d-worth').textContent     = data.totalWorthSol != null ? data.totalWorthSol + ' SOL' : '—';
-      document.getElementById('d-balance').textContent  = data.balanceSol != null ? data.balanceSol + ' SOL' : '—';
-      document.getElementById('d-holdings').textContent = data.holdingsValueSol != null ? data.holdingsValueSol + ' SOL' : '0 SOL';
-      document.getElementById('d-pnl').textContent      = data.totalPnlSol + ' SOL';
-      document.getElementById('d-pnl').className        = 'card-value ' + (parseFloat(data.totalPnlSol) >= 0 ? 'green' : 'red');
-      document.getElementById('d-trades').textContent   = data.totalTrades;
-      document.getElementById('d-winrate').textContent  = data.winRate || '—';
-      // Also set deposit address from portfolio if not already set
-      if (data.walletPublicKey) {
-        document.getElementById('d-address').textContent = data.walletPublicKey;
-      }
-    } catch (e) { console.warn('Portfolio load failed:', e); }
-
-    // Load settings
-    loadSettings();
-
-    // Load trades
-    try {
-      const res    = await fetch(`${API}/api/trades?limit=10`);
-      const data   = await res.json();
-      const tbody  = document.getElementById('trades-body');
-      if (data.trades && data.trades.length) {
-        tbody.innerHTML = data.trades.map(t => `
-          <tr>
-            <td style="font-family:var(--mono); color:var(--accent2);">${t.symbol || '—'}</td>
-            <td><span class="pill ${t.type === 'BUY' ? 'buy' : 'sell'}">${t.type}</span></td>
-            <td>${t.solAmount || '—'} SOL</td>
-            <td class="${t.pnlSol > 0 ? 'green' : t.pnlSol < 0 ? 'red' : ''}">${t.pnlSol != null ? t.pnlSol + ' SOL' : '—'}</td>
-            <td style="color:var(--muted);">${new Date(t.timestamp).toLocaleDateString()}</td>
-          </tr>`).join('');
-      }
+      const s = JSON.parse(saved);
+      const navLinks = document.querySelector('.nav-links');
+      const loginLink = navLinks.querySelector('.nav-cta');
+      loginLink.textContent = 'Dashboard →';
+      loginLink.href = '/dashboard';
+      loginLink.onclick = null;
     } catch {}
   }
 
-  function logout() {
-    localStorage.removeItem('autobags_session');
-    currentUser = null; authToken = null;
-    document.getElementById('dashboard').style.display = 'none';
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-
-  // ── Settings ───────────────────────────────────────────────────────────────
-  let currentSettings = {};
-
-  function switchMode(mode) {
-    currentSettings.mode = mode;
-    document.getElementById('mode-basic').style.display    = mode === 'basic'    ? 'block' : 'none';
-    document.getElementById('mode-advanced').style.display = mode === 'advanced' ? 'block' : 'none';
-    document.getElementById('tab-basic').classList.toggle('active',    mode === 'basic');
-    document.getElementById('tab-advanced').classList.toggle('active', mode === 'advanced');
-  }
-
-  function setRisk(level) {
-    currentSettings.riskLevel = level;
-    ['low','medium','high'].forEach(r => {
-      const btn = document.getElementById('risk-' + r);
-      btn.classList.toggle('active', r === level);
-    });
-  }
-
-  function saveSetting(key, value) {
-    currentSettings[key] = value;
-  }
-
-  async function loadSettings() {
-    if (!authToken) return;
-    try {
-      const res  = await fetch(`${API}/api/settings`, { headers: { 'Authorization': `Bearer ${authToken}` } });
-      const data = await res.json();
-      if (!data.success) return;
-      const s = data.settings;
-      currentSettings = { ...s };
-
-      // Apply to UI
-      document.getElementById('s-active').checked = s.active !== false;
-      switchMode(s.mode || 'basic');
-      setRisk(s.riskLevel || 'medium');
-
-      // Advanced sliders
-      document.getElementById('s-sl').value    = s.stopLossPct    || 8;    document.getElementById('v-sl').textContent    = s.stopLossPct    || 8;
-      document.getElementById('s-tp').value    = s.takeProfitPct  || 25;   document.getElementById('v-tp').textContent    = s.takeProfitPct  || 25;
-      document.getElementById('s-pe').value    = s.partialExitPct || 10;   document.getElementById('v-pe').textContent    = s.partialExitPct || 10;
-      document.getElementById('s-sol').value   = s.maxSolPerTrade || 80;   document.getElementById('v-sol').textContent   = s.maxSolPerTrade || 80;
-      document.getElementById('s-score').value = s.minIntelScore  || 65;   document.getElementById('v-score').textContent = s.minIntelScore  || 65;
-      document.getElementById('s-slip').value  = s.slippageBps    || 100;  document.getElementById('v-slip').textContent  = s.slippageBps    || 100;
-      document.getElementById('s-maxpos').value = String(s.maxPositions || 1);
-    } catch (e) { console.warn('Settings load failed:', e); }
-  }
-
-  async function saveSettings() {
-    if (!authToken) return;
-    const payload = {
-      ...currentSettings,
-      active:         document.getElementById('s-active').checked,
-      stopLossPct:    parseInt(document.getElementById('s-sl').value),
-      takeProfitPct:  parseInt(document.getElementById('s-tp').value),
-      partialExitPct: parseInt(document.getElementById('s-pe').value),
-      maxSolPerTrade: parseInt(document.getElementById('s-sol').value),
-      minIntelScore:  parseInt(document.getElementById('s-score').value),
-      slippageBps:    parseInt(document.getElementById('s-slip').value),
-      maxPositions:   parseInt(document.getElementById('s-maxpos').value),
-    };
-    try {
-      const res = await fetch(`${API}/api/settings`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
-      if (data.success) {
-        const msg = document.getElementById('saved-msg');
-        msg.style.display = 'block';
-        setTimeout(() => msg.style.display = 'none', 2000);
-      }
-    } catch (e) { console.warn('Save failed:', e); }
-  }
-
-  function copyAddress() {
-    const addr = document.getElementById('d-address').textContent;
-    navigator.clipboard.writeText(addr).then(() => {
-      const btn = document.querySelector('.copy-btn');
-      btn.textContent = 'Copied!';
-      setTimeout(() => btn.textContent = 'Copy', 2000);
-    });
-  }
-
-  // ── Load live stats ────────────────────────────────────────────────────────
   async function loadStats() {
     try {
       const res  = await fetch(`${API}/api/stats`);
       const { data } = await res.json();
-
-      // Price bar
       if (data.solana.price) {
         document.getElementById('sol-price').textContent = `$${data.solana.price.toFixed(2)}`;
         const chg = parseFloat(data.solana.change24h);
@@ -821,48 +449,18 @@
       document.getElementById('pb-pools').textContent    = data.bags.pools.toLocaleString();
       document.getElementById('pb-launches').textContent = data.bags.recentLaunches.toLocaleString();
       document.getElementById('pb-trades').textContent   = data.autobags.tradesTotal;
-
-      // Stats bar
       document.getElementById('stat-pools').textContent   = data.bags.pools.toLocaleString();
       document.getElementById('stat-traders').textContent = data.autobags.subscribers;
       document.getElementById('stat-trades').textContent  = data.autobags.tradesTotal;
       document.getElementById('stat-winrate').textContent = data.autobags.winRate || '—';
-
-      // Ticker — duplicate for seamless loop
       const tokens = data.bags.recentTokens;
       if (tokens && tokens.length) {
         const makeItem = t => `<div class="ticker-item"><span class="sym">$${t.symbol}</span><span class="lbl">${t.name?.slice(0,18) || ''}</span></div>`;
         const html = tokens.map(makeItem).join('');
-        const track = document.getElementById('ticker-track');
-        track.innerHTML = html + html; // duplicate for seamless scroll
+        document.getElementById('ticker-track').innerHTML = html + html;
       }
-    } catch (e) {
-      console.warn('Stats load failed:', e);
-    }
+    } catch (e) { console.warn('Stats load failed:', e); }
   }
-
-  // ── Auto-restore session ───────────────────────────────────────────────────
-  const saved = localStorage.getItem('autobags_session');
-  if (saved) {
-    try {
-      const s = JSON.parse(saved);
-      currentUser = { userId: s.userId, wallet: s.wallet };
-      authToken   = s.token;
-      // Verify token is still valid then show dashboard
-      fetch(`${API}/api/auth/me`, {
-        headers: { 'Authorization': `Bearer ${authToken}` }
-      }).then(r => r.json()).then(data => {
-        if (data.success) {
-          showDashboard();
-        } else {
-          // Token expired — clear and prompt login
-          localStorage.removeItem('autobags_session');
-          currentUser = null; authToken = null;
-        }
-      }).catch(() => {});
-    } catch { localStorage.removeItem('autobags_session'); }
-  }
-
   loadStats();
 </script>
 </body>

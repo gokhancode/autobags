@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — AUTOBAGS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:       #0a0a0f;
+      --surface:  #12121a;
+      --border:   #1e1e2e;
+      --accent:   #7c3aed;
+      --accent2:  #a855f7;
+      --green:    #22c55e;
+      --red:      #ef4444;
+      --yellow:   #eab308;
+      --text:     #f1f1f5;
+      --muted:    #6b7280;
+      --mono:     'Space Mono', monospace;
+    }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
+
+    /* ── NAV ── */
+    nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 32px; border-bottom: 1px solid var(--border);
+      background: rgba(10,10,15,0.95); backdrop-filter: blur(12px);
+      position: sticky; top: 0; z-index: 100;
+    }
+    .logo { font-size: 18px; font-weight: 800; letter-spacing: -0.5px; }
+    .logo span { color: var(--accent2); }
+    .nav-right { display: flex; align-items: center; gap: 16px; }
+    .nav-user { font-size: 13px; font-family: var(--mono); color: var(--accent2); }
+    .nav-btn { padding: 6px 14px; background: transparent; border: 1px solid var(--border); border-radius: 8px; color: var(--muted); font-size: 12px; cursor: pointer; transition: all .2s; }
+    .nav-btn:hover { border-color: var(--accent); color: var(--text); }
+    .nav-btn.danger:hover { border-color: var(--red); color: var(--red); }
+
+    /* ── LAYOUT ── */
+    .container { max-width: 960px; margin: 0 auto; padding: 32px 24px; }
+
+    /* ── CARDS ── */
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 24px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+    .card-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; font-weight: 600; }
+    .card-value { font-size: 22px; font-weight: 800; font-family: var(--mono); }
+    .card-value.green { color: var(--green); }
+    .card-value.red { color: var(--red); }
+    .card.highlight { border-color: var(--accent); background: rgba(124,58,237,0.06); }
+    .card.highlight .card-value { color: var(--accent2); }
+
+    /* ── OPEN POSITIONS ── */
+    .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 20px; }
+    .panel-title { font-size: 14px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    .panel-title .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+    .pos-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(30,30,46,0.5); }
+    .pos-row:last-child { border-bottom: none; }
+    .pos-symbol { font-family: var(--mono); font-weight: 700; color: var(--accent2); font-size: 14px; }
+    .pos-meta { font-size: 12px; color: var(--muted); }
+    .pos-pnl { font-family: var(--mono); font-weight: 700; font-size: 14px; }
+    .pos-pnl.up { color: var(--green); }
+    .pos-pnl.down { color: var(--red); }
+    .empty-state { text-align: center; padding: 32px; color: var(--muted); font-size: 13px; }
+
+    /* ── DEPOSIT BOX ── */
+    .deposit-box { display: flex; align-items: center; gap: 12px; padding: 16px; background: rgba(124,58,237,0.06); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 20px; }
+    .deposit-box .label { font-size: 12px; color: var(--muted); font-weight: 600; white-space: nowrap; }
+    .deposit-box .address { flex: 1; padding: 8px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; font-family: var(--mono); font-size: 11px; color: var(--accent2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .copy-btn { padding: 8px 14px; background: var(--accent); border: none; border-radius: 6px; color: #fff; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+    .copy-btn:hover { background: var(--accent2); }
+
+    /* ── SETTINGS ── */
+    .mode-tabs { display: flex; gap: 6px; margin-bottom: 20px; }
+    .mode-tab { flex: 1; padding: 8px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-weight: 700; font-size: 13px; cursor: pointer; transition: all .2s; text-align: center; }
+    .mode-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(30,30,46,0.4); }
+    .toggle-row:last-child { border-bottom: none; }
+    .toggle-row label { font-size: 13px; font-weight: 600; }
+    .toggle-row small { display: block; color: var(--muted); font-size: 11px; margin-top: 2px; }
+    .toggle { position: relative; width: 40px; height: 22px; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .slider-toggle { position: absolute; inset: 0; background: var(--border); border-radius: 99px; cursor: pointer; transition: .3s; }
+    .slider-toggle:before { content: ''; position: absolute; width: 16px; height: 16px; left: 3px; top: 3px; background: white; border-radius: 50%; transition: .3s; }
+    .toggle input:checked + .slider-toggle { background: var(--green); }
+    .toggle input:checked + .slider-toggle:before { transform: translateX(18px); }
+    .risk-group { display: flex; gap: 6px; margin: 12px 0 16px; }
+    .risk-btn { flex: 1; padding: 8px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-size: 12px; font-weight: 600; cursor: pointer; transition: all .2s; text-align: center; }
+    .risk-btn.active.low    { background: rgba(34,197,94,0.15);  color: var(--green); border-color: var(--green); }
+    .risk-btn.active.medium { background: rgba(234,179,8,0.15);  color: var(--yellow); border-color: var(--yellow); }
+    .risk-btn.active.high   { background: rgba(239,68,68,0.15);  color: var(--red); border-color: var(--red); }
+    .range-row { margin: 10px 0; }
+    .range-row label { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+    .range-row label span { color: var(--accent2); font-family: var(--mono); }
+    input[type=range] { width: 100%; accent-color: var(--accent); }
+    .adv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media(max-width:500px) { .adv-grid { grid-template-columns: 1fr; } }
+    .save-row { display: flex; align-items: center; gap: 12px; margin-top: 16px; }
+    .save-btn { padding: 10px 24px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; background: var(--accent); color: #fff; }
+    .save-btn:hover { background: var(--accent2); }
+    .saved-msg { color: var(--green); font-size: 12px; display: none; }
+
+    /* ── TRADES TABLE ── */
+    .trades-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .trades-table th { text-align: left; padding: 8px 10px; color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--border); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .trades-table td { padding: 10px; border-bottom: 1px solid rgba(30,30,46,0.4); }
+    .trades-table tr:last-child td { border-bottom: none; }
+    .pill { padding: 2px 8px; border-radius: 99px; font-size: 10px; font-weight: 700; }
+    .pill.buy  { background: rgba(34,197,94,0.15); color: var(--green); }
+    .pill.sell { background: rgba(239,68,68,0.15);  color: var(--red); }
+
+    /* ── EXPORT ── */
+    .export-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .export-row input { max-width: 160px; padding: 8px 12px; font-size: 13px; }
+    .export-btn { padding: 8px 14px; background: rgba(239,68,68,0.15); border: 1px solid var(--red); border-radius: 6px; color: var(--red); font-size: 12px; font-weight: 600; cursor: pointer; }
+    .export-btn:hover { background: rgba(239,68,68,0.25); }
+    .export-result { display: none; margin-top: 12px; }
+    .export-warning { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.3); border-radius: 8px; padding: 10px; font-size: 11px; color: var(--red); margin-bottom: 8px; }
+    .export-key { padding: 8px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; font-family: var(--mono); font-size: 10px; color: var(--red); word-break: break-all; }
+
+    /* ── REFRESH TIMER ── */
+    .refresh-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+    .refresh-bar .status { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+    .refresh-bar .status .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+    .refresh-btn { padding: 6px 12px; background: transparent; border: 1px solid var(--border); border-radius: 6px; color: var(--muted); font-size: 11px; cursor: pointer; }
+    .refresh-btn:hover { border-color: var(--accent); color: var(--text); }
+
+    @media (max-width: 600px) {
+      nav { padding: 12px 16px; }
+      .container { padding: 20px 16px; }
+      .cards { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* ── FORM INPUTS ── */
+    input:not([type=range]):not([type=checkbox]) {
+      padding: 10px 12px; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--text); font-size: 13px; outline: none; transition: border-color .2s;
+    }
+    input:focus { border-color: var(--accent); }
+    select { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 6px 10px; border-radius: 6px; font-size: 12px; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="/" style="text-decoration:none; color:inherit;"><div class="logo">AUTO<span>BAGS</span></div></a>
+  <div class="nav-right">
+    <div class="nav-user" id="nav-user"></div>
+    <a href="/" class="nav-btn">Home</a>
+    <button onclick="logout()" class="nav-btn danger">Log out</button>
+  </div>
+</nav>
+
+<div class="container">
+
+  <!-- Refresh bar -->
+  <div class="refresh-bar">
+    <div class="status"><div class="dot"></div> <span>Bot running · updates every 30s</span></div>
+    <button class="refresh-btn" onclick="loadAll()">↻ Refresh</button>
+  </div>
+
+  <!-- Balance cards -->
+  <div class="cards">
+    <div class="card highlight">
+      <div class="card-label">Total Worth</div>
+      <div class="card-value" id="d-worth">—</div>
+    </div>
+    <div class="card">
+      <div class="card-label">SOL Balance</div>
+      <div class="card-value" id="d-balance">—</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Holdings</div>
+      <div class="card-value" id="d-holdings">—</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Total P&L</div>
+      <div class="card-value" id="d-pnl">—</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Trades</div>
+      <div class="card-value" id="d-trades">—</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Win Rate</div>
+      <div class="card-value" id="d-winrate">—</div>
+    </div>
+  </div>
+
+  <!-- Deposit -->
+  <div class="deposit-box">
+    <div class="label">Deposit SOL →</div>
+    <div class="address" id="d-address"></div>
+    <button class="copy-btn" onclick="copyAddr()">Copy</button>
+  </div>
+
+  <!-- Open positions -->
+  <div class="panel">
+    <div class="panel-title"><div class="dot"></div> Open Positions</div>
+    <div id="positions-list">
+      <div class="empty-state">No open positions</div>
+    </div>
+  </div>
+
+  <!-- Settings -->
+  <div class="panel">
+    <div class="panel-title">⚙️ Bot Settings</div>
+
+    <div class="toggle-row">
+      <div><label>Bot active</label><small>Agent scouting and trading</small></div>
+      <label class="toggle"><input type="checkbox" id="s-active" /><span class="slider-toggle"></span></label>
+    </div>
+
+    <div style="margin-top:16px; font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px;">Mode</div>
+    <div class="mode-tabs" style="margin-top:8px;">
+      <button class="mode-tab active" id="tab-basic" onclick="switchMode('basic')">🟢 Basic</button>
+      <button class="mode-tab" id="tab-advanced" onclick="switchMode('advanced')">⚡ Advanced</button>
+    </div>
+
+    <div id="mode-basic">
+      <div style="font-size:13px; color:var(--muted); margin-bottom:12px;">Pick a risk preset. The bot handles everything else.</div>
+      <div class="risk-group">
+        <button class="risk-btn low" id="risk-low" onclick="setRisk('low')">🟢 Low<br/><small style="font-weight:400; font-size:10px;">-5% / +15%</small></button>
+        <button class="risk-btn medium" id="risk-medium" onclick="setRisk('medium')">🟡 Medium<br/><small style="font-weight:400; font-size:10px;">-8% / +25%</small></button>
+        <button class="risk-btn high" id="risk-high" onclick="setRisk('high')">🔴 High<br/><small style="font-weight:400; font-size:10px;">-12% / +40%</small></button>
+      </div>
+    </div>
+
+    <div id="mode-advanced" style="display:none;">
+      <div class="adv-grid">
+        <div>
+          <div class="range-row"><label>Stop loss <span id="v-sl">8</span>%</label><input type="range" id="s-sl" min="1" max="50" value="8" oninput="document.getElementById('v-sl').textContent=this.value" /></div>
+          <div class="range-row"><label>Take profit <span id="v-tp">25</span>%</label><input type="range" id="s-tp" min="5" max="200" value="25" oninput="document.getElementById('v-tp').textContent=this.value" /></div>
+          <div class="range-row"><label>Partial exit <span id="v-pe">10</span>%</label><input type="range" id="s-pe" min="5" max="50" value="10" oninput="document.getElementById('v-pe').textContent=this.value" /></div>
+        </div>
+        <div>
+          <div class="range-row"><label>Max deploy <span id="v-sol">80</span>%</label><input type="range" id="s-sol" min="10" max="100" value="80" oninput="document.getElementById('v-sol').textContent=this.value" /></div>
+          <div class="range-row"><label>Min score <span id="v-score">65</span>/100</label><input type="range" id="s-score" min="0" max="100" value="65" oninput="document.getElementById('v-score').textContent=this.value" /></div>
+          <div class="range-row"><label>Slippage <span id="v-slip">100</span>bps</label><input type="range" id="s-slip" min="10" max="1000" step="10" value="100" oninput="document.getElementById('v-slip').textContent=this.value" /></div>
+        </div>
+      </div>
+      <div class="toggle-row" style="margin-top:8px;">
+        <div><label>Max positions</label></div>
+        <select id="s-maxpos"><option value="1">1</option><option value="2">2</option><option value="3">3</option></select>
+      </div>
+    </div>
+
+    <div class="save-row">
+      <button class="save-btn" onclick="saveSettings()">Save settings</button>
+      <span class="saved-msg" id="saved-msg">✅ Saved</span>
+    </div>
+  </div>
+
+  <!-- Recent trades -->
+  <div class="panel">
+    <div class="panel-title">📊 Recent Trades</div>
+    <table class="trades-table">
+      <thead><tr><th>Token</th><th>Type</th><th>Amount</th><th>P&L</th><th>Time</th></tr></thead>
+      <tbody id="trades-body"><tr><td colspan="5" class="empty-state">No trades yet</td></tr></tbody>
+    </table>
+  </div>
+
+  <!-- Export -->
+  <div class="panel">
+    <div class="panel-title">🔐 Export Private Key</div>
+    <p style="font-size:12px; color:var(--muted); margin-bottom:12px;">Take self-custody. Requires your 2FA code.</p>
+    <div class="export-row">
+      <input type="text" id="export-totp" placeholder="6-digit code" maxlength="6" inputmode="numeric" />
+      <button class="export-btn" onclick="exportKey()">Export</button>
+    </div>
+    <div class="export-result" id="export-result">
+      <div class="export-warning">⚠️ This is your full private key. Anyone who has it controls your wallet.</div>
+      <div class="export-key" id="export-key"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const BASE = window.location.pathname.startsWith('/autobags') ? '/autobags' : '';
+  const API  = BASE;
+
+  // Auth check
+  const session = JSON.parse(localStorage.getItem('autobags_session') || 'null');
+  if (!session) { window.location.href = '/'; }
+  const authToken = session?.token;
+  const userId    = session?.userId;
+
+  document.getElementById('nav-user').textContent = `@${userId}`;
+  document.getElementById('d-address').textContent = session?.wallet || '';
+
+  let currentSettings = {};
+
+  async function loadPortfolio() {
+    try {
+      const res  = await fetch(`${API}/api/portfolio/${userId}`);
+      const data = await res.json();
+      document.getElementById('d-worth').textContent    = data.totalWorthSol != null ? data.totalWorthSol + ' SOL' : '—';
+      document.getElementById('d-balance').textContent  = data.balanceSol != null ? data.balanceSol + ' SOL' : '—';
+      document.getElementById('d-holdings').textContent = data.holdingsValueSol != null ? data.holdingsValueSol + ' SOL' : '0 SOL';
+      document.getElementById('d-pnl').textContent      = data.totalPnlSol + ' SOL';
+      document.getElementById('d-pnl').className        = 'card-value ' + (parseFloat(data.totalPnlSol) >= 0 ? 'green' : 'red');
+      document.getElementById('d-trades').textContent   = data.totalTrades;
+      document.getElementById('d-winrate').textContent  = data.winRate || '—';
+      if (data.walletPublicKey) document.getElementById('d-address').textContent = data.walletPublicKey;
+
+      // Open positions
+      const posList = document.getElementById('positions-list');
+      if (data.openPositions && data.openPositions.length) {
+        posList.innerHTML = data.openPositions.map(p => `
+          <div class="pos-row">
+            <div>
+              <div class="pos-symbol">$${p.symbol}</div>
+              <div class="pos-meta">${p.solSpent?.toFixed(4)} SOL invested · Score: ${p.score}</div>
+            </div>
+            <div style="text-align:right;">
+              <div class="pos-pnl ${p.pnlPct >= 0 ? 'up' : 'down'}">${p.pnlPct >= 0 ? '+' : ''}${p.pnlPct}%</div>
+              <div class="pos-meta">${p.currentValueSol?.toFixed(4)} SOL</div>
+            </div>
+          </div>
+        `).join('');
+      } else {
+        posList.innerHTML = '<div class="empty-state">No open positions — bot is scouting</div>';
+      }
+    } catch (e) { console.warn('Portfolio load failed:', e); }
+  }
+
+  async function loadTrades() {
+    try {
+      const res  = await fetch(`${API}/api/trades?limit=10`);
+      const data = await res.json();
+      const tbody = document.getElementById('trades-body');
+      if (data.trades && data.trades.length) {
+        tbody.innerHTML = data.trades.map(t => `
+          <tr>
+            <td style="font-family:var(--mono); color:var(--accent2); font-weight:700;">$${t.symbol || '?'}</td>
+            <td><span class="pill ${t.type === 'BUY' ? 'buy' : 'sell'}">${t.type}</span></td>
+            <td style="font-family:var(--mono);">${parseFloat(t.solAmount || 0).toFixed(4)}</td>
+            <td class="${(t.pnlSol||0) > 0 ? 'green' : (t.pnlSol||0) < 0 ? 'red' : ''}" style="font-family:var(--mono);">${t.pnlSol != null ? (t.pnlSol > 0 ? '+' : '') + parseFloat(t.pnlSol).toFixed(4) : '—'}</td>
+            <td style="color:var(--muted);">${new Date(t.timestamp).toLocaleString()}</td>
+          </tr>`).join('');
+      }
+    } catch {}
+  }
+
+  async function loadSettings() {
+    if (!authToken) return;
+    try {
+      const res  = await fetch(`${API}/api/settings`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+      const data = await res.json();
+      if (!data.success) return;
+      const s = data.settings;
+      currentSettings = { ...s };
+      document.getElementById('s-active').checked = s.active !== false;
+      switchMode(s.mode || 'basic');
+      setRisk(s.riskLevel || 'medium');
+      document.getElementById('s-sl').value = s.stopLossPct || 8;       document.getElementById('v-sl').textContent = s.stopLossPct || 8;
+      document.getElementById('s-tp').value = s.takeProfitPct || 25;    document.getElementById('v-tp').textContent = s.takeProfitPct || 25;
+      document.getElementById('s-pe').value = s.partialExitPct || 10;   document.getElementById('v-pe').textContent = s.partialExitPct || 10;
+      document.getElementById('s-sol').value = s.maxSolPerTrade || 80;  document.getElementById('v-sol').textContent = s.maxSolPerTrade || 80;
+      document.getElementById('s-score').value = s.minIntelScore || 65; document.getElementById('v-score').textContent = s.minIntelScore || 65;
+      document.getElementById('s-slip').value = s.slippageBps || 100;   document.getElementById('v-slip').textContent = s.slippageBps || 100;
+      document.getElementById('s-maxpos').value = String(s.maxPositions || 1);
+    } catch (e) { console.warn('Settings load failed:', e); }
+  }
+
+  function switchMode(mode) {
+    currentSettings.mode = mode;
+    document.getElementById('mode-basic').style.display    = mode === 'basic' ? 'block' : 'none';
+    document.getElementById('mode-advanced').style.display = mode === 'advanced' ? 'block' : 'none';
+    document.getElementById('tab-basic').classList.toggle('active', mode === 'basic');
+    document.getElementById('tab-advanced').classList.toggle('active', mode === 'advanced');
+  }
+
+  function setRisk(level) {
+    currentSettings.riskLevel = level;
+    ['low','medium','high'].forEach(r => document.getElementById('risk-' + r).classList.toggle('active', r === level));
+  }
+
+  async function saveSettings() {
+    if (!authToken) return;
+    const payload = {
+      ...currentSettings,
+      active: document.getElementById('s-active').checked,
+      stopLossPct: parseInt(document.getElementById('s-sl').value),
+      takeProfitPct: parseInt(document.getElementById('s-tp').value),
+      partialExitPct: parseInt(document.getElementById('s-pe').value),
+      maxSolPerTrade: parseInt(document.getElementById('s-sol').value),
+      minIntelScore: parseInt(document.getElementById('s-score').value),
+      slippageBps: parseInt(document.getElementById('s-slip').value),
+      maxPositions: parseInt(document.getElementById('s-maxpos').value),
+    };
+    try {
+      const res = await fetch(`${API}/api/settings`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) });
+      const data = await res.json();
+      if (data.success) { const m = document.getElementById('saved-msg'); m.style.display = 'inline'; setTimeout(() => m.style.display = 'none', 2000); }
+    } catch (e) { console.warn('Save failed:', e); }
+  }
+
+  async function exportKey() {
+    const totpToken = document.getElementById('export-totp').value.trim();
+    if (!totpToken) { alert('Enter your 2FA code'); return; }
+    const res = await fetch(`${API}/api/auth/export`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify({ totpToken }) });
+    const data = await res.json();
+    if (!res.ok || !data.success) { alert(data.error || 'Export failed'); return; }
+    document.getElementById('export-key').textContent = data.privateKey;
+    document.getElementById('export-result').style.display = 'block';
+  }
+
+  function copyAddr() {
+    navigator.clipboard.writeText(document.getElementById('d-address').textContent).then(() => {
+      const btn = document.querySelector('.copy-btn');
+      const orig = btn.textContent; btn.textContent = '✓'; setTimeout(() => btn.textContent = orig, 1500);
+    });
+  }
+
+  function logout() {
+    localStorage.removeItem('autobags_session');
+    window.location.href = '/';
+  }
+
+  function loadAll() { loadPortfolio(); loadTrades(); loadSettings(); }
+  loadAll();
+  setInterval(loadAll, 30000); // auto-refresh every 30s
+</script>
+</body>
+</html>
