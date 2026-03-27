@@ -75,7 +75,7 @@ router.get('/:userId', (req, res) => {
  */
 router.get('/', (req, res) => {
   const subs = loadSubscribers();
-  res.json({ count: Object.keys(subs).length, subscribers: Object.values(subs) });
+  res.json({ success: true, count: Object.keys(subs).length, subscribers: Object.values(subs) });
 });
 
 module.exports = router;

@@ -13,7 +13,7 @@ function loadTrades() {
 router.get('/', (req, res) => {
   const trades = loadTrades();
   const limit = parseInt(req.query.limit) || 20;
-  res.json({ trades: trades.slice(-limit).reverse() });
+  res.json({ success: true, trades: trades.slice(-limit).reverse() });
 });
 
 module.exports = router;
