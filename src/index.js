@@ -21,6 +21,7 @@ app.use(express.static(path.join(__dirname, 'web')));
   app.use(`${prefix}/api/trades`,      require('./api/trades'));
   app.use(`${prefix}/api/status`,      require('./api/status'));
   app.use(`${prefix}/api/stats`,       require('./api/stats'));
+  app.use(`${prefix}/api/sell`,        require('./api/sell'));
 });
 
 // Global error handler

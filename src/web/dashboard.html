@@ -80,6 +80,9 @@
     .pos-pnl { font-family: var(--mono); font-weight: 700; font-size: 14px; }
     .pos-pnl.up { color: var(--green); }
     .pos-pnl.down { color: var(--red); }
+    .sell-btn { padding: 5px 12px; background: rgba(239,68,68,0.12); border: 1px solid var(--red); border-radius: 6px; color: var(--red); font-size: 11px; font-weight: 700; cursor: pointer; transition: all .2s; margin-top: 4px; }
+    .sell-btn:hover { background: rgba(239,68,68,0.25); }
+    .sell-btn:disabled { opacity: 0.4; cursor: not-allowed; }
     .empty-state { text-align: center; padding: 32px; color: var(--muted); font-size: 13px; }
 
     /* ── DEPOSIT BOX ── */
@@ -354,6 +357,7 @@
             <div style="text-align:right;">
               <div class="pos-pnl ${p.pnlPct >= 0 ? 'up' : 'down'}">${p.pnlPct >= 0 ? '+' : ''}${p.pnlPct}%</div>
               <div class="pos-meta">${p.currentValueSol?.toFixed(4)} SOL</div>
+              <button class="sell-btn" onclick="manualSell('${p.mint}', '$${p.symbol}', this)">Sell now</button>
             </div>
           </div>
         `).join('');
@@ -460,6 +464,29 @@
   function logout() {
     localStorage.removeItem('autobags_session');
     window.location.href = '/';
+  }
+
+  async function manualSell(mint, symbol, btn) {
+    if (!confirm(`Sell ${symbol} now? This will close your entire position.`)) return;
+    btn.disabled = true; btn.textContent = 'Selling...';
+    try {
+      const res = await fetch(`${API}/api/sell`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+        body: JSON.stringify({ mint })
+      });
+      const data = await res.json();
+      if (data.success) {
+        btn.textContent = `Sold (${data.pnlSol >= 0 ? '+' : ''}${data.pnlSol.toFixed(4)} SOL)`;
+        btn.style.borderColor = 'var(--green)'; btn.style.color = 'var(--green)';
+        setTimeout(loadAll, 2000);
+      } else {
+        alert('Sell failed: ' + (data.error || 'Unknown error'));
+        btn.disabled = false; btn.textContent = 'Sell now';
+      }
+    } catch (err) {
+      alert('Network error'); btn.disabled = false; btn.textContent = 'Sell now';
+    }
   }
 
   function toggleExplain(i) {
