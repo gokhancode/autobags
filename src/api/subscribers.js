@@ -71,11 +71,17 @@ router.get('/:userId', (req, res) => {
 
 /**
  * GET /api/subscribers
- * List all subscribers (admin — add auth middleware later)
+ * List all subscribers (admin-only — requires auth + admin check)
  */
-router.get('/', (req, res) => {
+const auth = require('./auth');
+router.get('/', auth.requireAuth, (req, res) => {
+  // Only allow admin users (for now, first registered user)
   const subs = loadSubscribers();
-  res.json({ success: true, count: Object.keys(subs).length, subscribers: Object.values(subs) });
+  const userIds = Object.keys(subs);
+  if (userIds.length > 0 && req.user.userId !== userIds[0]) {
+    return res.status(403).json({ error: 'Admin access only' });
+  }
+  res.json({ success: true, count: userIds.length, subscribers: Object.values(subs) });
 });
 
 module.exports = router;

@@ -22,6 +22,12 @@ app.use(express.static(path.join(__dirname, 'web')));
   app.use(`${prefix}/api/stats`,       require('./api/stats'));
 });
 
+// Global error handler
+app.use((err, req, res, next) => {
+  console.error('[Server] Unhandled error:', err.message);
+  res.status(500).json({ error: 'Internal server error' });
+});
+
 // Dashboard route
 app.get('/dashboard', (req, res) => {
   res.sendFile(path.join(__dirname, 'web', 'dashboard.html'));

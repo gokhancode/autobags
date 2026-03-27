@@ -3,7 +3,7 @@
  * Full pipeline: scout → score → buy → monitor → exit
  * Executes real on-chain swaps via Bags API + user custodial wallets
  */
-require('dotenv').config({ path: './config/.env' });
+// dotenv loaded by index.js — no need to re-load here
 
 const { VersionedTransaction, Connection, LAMPORTS_PER_SOL } = require('@solana/web3.js');
 const bs58         = require('bs58');

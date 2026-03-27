@@ -15,6 +15,30 @@ const USERS_FILE = path.join(__dirname, '../../data/users.json');
 const JWT_SECRET = process.env.JWT_SECRET || process.env.WALLET_MASTER_KEY;
 const JWT_EXPIRY = '7d';
 
+// Simple in-memory rate limiter for auth endpoints
+const loginAttempts = new Map(); // ip -> { count, resetAt }
+const RATE_LIMIT_WINDOW = 15 * 60 * 1000; // 15 minutes
+const MAX_ATTEMPTS = 10;
+
+function checkRateLimit(ip) {
+  const now = Date.now();
+  const entry = loginAttempts.get(ip);
+  if (!entry || now > entry.resetAt) {
+    loginAttempts.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW });
+    return true;
+  }
+  entry.count++;
+  if (entry.count > MAX_ATTEMPTS) return false;
+  return true;
+}
+// Clean up old entries every 30 min
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of loginAttempts) {
+    if (now > entry.resetAt) loginAttempts.delete(ip);
+  }
+}, 30 * 60 * 1000);
+
 function loadUsers() {
   if (!fs.existsSync(USERS_FILE)) return {};
   return JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
@@ -44,6 +68,8 @@ router.post('/signup', async (req, res) => {
   const { userId, password, email } = req.body;
   if (!userId || !password) return res.status(400).json({ error: 'userId and password required' });
   if (password.length < 8) return res.status(400).json({ error: 'Password must be 8+ characters' });
+  if (userId.length > 32) return res.status(400).json({ error: 'Username too long (max 32 chars)' });
+  if (!/^[a-zA-Z0-9_-]+$/.test(userId)) return res.status(400).json({ error: 'Username must be alphanumeric (a-z, 0-9, _, -)' });
 
   const users = loadUsers();
   if (users[userId]) return res.status(409).json({ error: 'Username taken' });
@@ -128,6 +154,9 @@ router.post('/verify-2fa', (req, res) => {
 // ── POST /api/auth/login ──────────────────────────────────────────────────
 // Body: { userId, password, totpToken }
 router.post('/login', async (req, res) => {
+  const ip = req.ip || req.connection?.remoteAddress || 'unknown';
+  if (!checkRateLimit(ip)) return res.status(429).json({ error: 'Too many attempts. Try again in 15 minutes.' });
+
   const { userId, password, totpToken } = req.body;
   if (!userId || !password) return res.status(400).json({ error: 'userId and password required' });
 
@@ -155,6 +184,9 @@ router.post('/login', async (req, res) => {
 // Export private key. Requires valid JWT + fresh 2FA code.
 // Body: { totpToken }
 router.post('/export', requireAuth, (req, res) => {
+  const ip = req.ip || req.connection?.remoteAddress || 'unknown';
+  if (!checkRateLimit(ip)) return res.status(429).json({ error: 'Too many attempts. Try again later.' });
+
   const { totpToken } = req.body;
   const { userId }    = req.user;
 
