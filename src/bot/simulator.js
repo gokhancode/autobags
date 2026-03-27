@@ -45,14 +45,19 @@ function initSim(startBalanceUsd) {
     peakBalance: startBalanceUsd,
     maxDrawdown: 0,
     startedAt: new Date().toISOString(),
-    // High-freq params
-    minScore: 55,        // lower threshold = more trades
-    stopLossPct: 5,
-    takeProfitPct: 10,
-    partialExitPct: 6,   // secure 50% at +6%
-    maxPositionUsd: 350, // ~1/3 of balance per position
-    cooldownMs: 30000,   // 30s between trades
+    // High-freq params (v2 — tighter risk)
+    minScore: 60,        // slightly pickier entries
+    stopLossPct: 3,      // tight stop — cut losers FAST
+    takeProfitPct: 8,    // take profit quicker
+    partialExitPct: 4,   // secure 50% at +4%
+    maxPositionUsd: 250, // ~25% of balance per position
+    cooldownMs: 20000,   // 20s between trades
     lastTradeTime: 0,
+    maxHoldMinutes: 15,  // dump anything held >15min with no gain
+    trailingStopPct: 2,  // tighter trailing stop (2% from high)
+    minMomentum5m: 3,    // need 3%+ 5m momentum to enter
+    portfolioStopPct: 15,// circuit breaker: pause if down 15% total
+    paused: false,
   };
   saveState(state);
   saveTrades([]);
@@ -154,7 +159,8 @@ async function scoreCandidates(candidates) {
       c.vol24 = vol24;
       c.mcap = mcap;
       c.momentum5m = priceChange5m;
-      if (score >= 40 && c.price > 0) scored.push(c);
+      // Only enter with real momentum and decent score
+      if (score >= 50 && c.price > 0 && priceChange5m >= 3) scored.push(c);
     } catch { continue; }
   }
 
@@ -250,12 +256,24 @@ async function tick() {
 
   const now = Date.now();
 
+  // Portfolio circuit breaker
+  const totalInPositions = Object.values(state.positions).reduce((s, p) => s + p.usdAmount, 0);
+  const approxTotal = state.balanceUsd + totalInPositions;
+  const portfolioPnlPct = ((approxTotal - state.startBalanceUsd) / state.startBalanceUsd) * 100;
+  if (portfolioPnlPct <= -state.portfolioStopPct && !state.paused) {
+    state.paused = true;
+    saveState(state);
+    console.log(`[SIM] ⛔ CIRCUIT BREAKER — portfolio down ${portfolioPnlPct.toFixed(1)}%, pausing new entries for 5min`);
+    setTimeout(() => { const s = loadState(); s.paused = false; saveState(s); console.log('[SIM] ▶️ Circuit breaker released'); }, 300000);
+  }
+
   // 1. Monitor existing positions
   for (const [mint, pos] of Object.entries(state.positions)) {
     const price = await getPrice(mint);
     if (!price) continue;
 
     const pnlPct = ((price - pos.entryPrice) / pos.entryPrice) * 100;
+    const holdMinutes = (now - new Date(pos.entryTime).getTime()) / 60000;
     
     // Track high watermark
     if (price > (pos.highPrice || pos.entryPrice)) {
@@ -263,32 +281,35 @@ async function tick() {
       saveState(state);
     }
 
-    // Stop loss
+    // Stop loss — cut losers FAST
     if (pnlPct <= -state.stopLossPct) {
       simSell(state, mint, price, `Stop loss (${pnlPct.toFixed(1)}%)`);
       continue;
     }
 
-    // Partial exit at +6%
+    // Time-based exit: if held >15min and flat/negative, dump it
+    if (holdMinutes >= state.maxHoldMinutes && pnlPct < 2) {
+      simSell(state, mint, price, `Stale position (${holdMinutes.toFixed(0)}min, ${pnlPct.toFixed(1)}%)`);
+      continue;
+    }
+
+    // Partial exit at +4%
     if (pnlPct >= state.partialExitPct && !pos.partialExited) {
-      // Sell 50% of position
       const halfTokens = pos.tokens / 2;
       const halfValue = halfTokens * price;
+      const halfCost = halfTokens * pos.entryPrice;
       state.balanceUsd += halfValue;
+      state.totalPnlUsd += (halfValue - halfCost);
       pos.tokens = halfTokens;
-      pos.usdAmount = halfTokens * pos.entryPrice;
+      pos.usdAmount = halfCost;
       pos.partialExited = true;
-      state.totalPnlUsd += (halfValue - (pos.tokens * pos.entryPrice));
       saveState(state);
 
       const trades = loadTrades();
       trades.push({
-        type: 'PARTIAL_SELL',
-        symbol: pos.symbol, mint, priceUsd: price,
-        usdAmount: halfValue.toFixed(2),
-        pnlPct: pnlPct.toFixed(1),
-        reason: 'Partial exit (50%)',
-        balance: state.balanceUsd.toFixed(2),
+        type: 'PARTIAL_SELL', symbol: pos.symbol, mint, priceUsd: price,
+        usdAmount: halfValue.toFixed(2), pnlPct: pnlPct.toFixed(1),
+        reason: 'Partial exit (50%)', balance: state.balanceUsd.toFixed(2),
         timestamp: new Date().toISOString()
       });
       saveTrades(trades);
@@ -302,11 +323,11 @@ async function tick() {
       continue;
     }
 
-    // Trailing stop: if was up >5% and now dropping, cut it
+    // Tight trailing stop: 2% drop from high (if was ever up >3%)
     if (pos.highPrice && pos.entryPrice) {
       const fromHigh = ((price - pos.highPrice) / pos.highPrice) * 100;
       const fromEntry = ((pos.highPrice - pos.entryPrice) / pos.entryPrice) * 100;
-      if (fromEntry > 4 && fromHigh < -3) {
+      if (fromEntry > 3 && fromHigh < -state.trailingStopPct) {
         simSell(state, mint, price, `Trailing stop (${fromHigh.toFixed(1)}% from high)`);
         continue;
       }
@@ -315,6 +336,7 @@ async function tick() {
 
   // 2. Look for new entries
   state = loadState(); // reload after sells
+  if (state.paused) return;
   const openCount = Object.keys(state.positions).length;
   if (openCount >= state.maxPositions) return;
   if (now - state.lastTradeTime < state.cooldownMs) return;
