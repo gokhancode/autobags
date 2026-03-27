@@ -404,8 +404,9 @@
 
 <script>
   // Detect base path — works whether served at /autobags or root
+  // Works on autobags.io (root) and IP/autobags (subpath)
   const BASE = window.location.pathname.startsWith('/autobags') ? '/autobags' : '';
-  const API  = BASE;
+  const API  = BASE; // empty string = relative to origin (correct for autobags.io)
   let currentUser = null;
   let authToken   = null;
 
