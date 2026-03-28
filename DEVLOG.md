@@ -179,13 +179,22 @@
 
 ### Day 1 Stats
 - **30+ commits** pushed to GitHub
-- **20 source files** (13 JS modules + 3 HTML pages + configs)
-- **12 GitBook doc pages**
-- **10 Bags API endpoints** integrated
-- **25 trading signals** tracked by quant engine
-- **5 competing strategies** in tournament
-- **1 real trade** executed on mainnet
+- **32 source files** (JS modules + HTML pages + configs)
+- **6,800+ lines of code** across all files
+- **39 API routes** across 17 route groups
+- **14 GitBook doc pages**
+- **10 Bags API endpoints** integrated (token feed, swap, pools, partner config, fee claiming, token launch, etc.)
+- **25 trading signals** tracked by Bayesian quant engine
+- **5 competing strategies** in strategy tournament (Momentum, Mean Reversion, Whale Shadow, Session Trader, Contrarian)
+- **1 real trade** executed on mainnet (XSTEIN via Bags swap)
 - **Full test suite**: 23/23 passing
+- **SQLite database** with WAL mode (migrated from JSON)
+- **RPC fallback manager** with Helius support + auto-rotation
+- **AI trade explanations** via Groq (Llama 3.3 70B)
+- **Narrative scanner** — AI identifies trending narratives for token launch ideas
+- **AES-256-GCM** wallet encryption
+- **TOTP 2FA** + JWT auth
+- **Light + Dark mode** frontend
 - **Live at**: [autobags.io](https://autobags.io)
 
 ### Architecture
@@ -285,10 +294,25 @@ autobags.io
 ```
 
 ### Stats at End of Day 2 Morning Session
-- **Sim balance:** ~$1,639 (+64% from $1,000)
-- **Total sim trades:** 250+
-- **Win rate:** ~43%
-- **5 tournament strategies:** freshly reset, competing
-- **Quant brain:** 503 trades analyzed, tracking 25 signals
-- **Top signal:** momentum5m_mild (46.2% WR)
-- **Worst signal:** volume_declining (20% WR)
+- **43 commits** pushed to GitHub (cumulative)
+- **32 source files** | **6,800+ lines of code**
+- **39 API routes** across 17 route groups
+- **4 web pages**: Landing, Dashboard, Sim Dashboard, Admin Panel
+- **Sim balance:** $1,254 (+25.4% from $1,000)
+- **Sim peak:** $1,895 (+89.5%)
+- **Total sim trades:** 256 (111W / 143L)
+- **Win rate:** 43.4%
+- **Max drawdown:** 11.7%
+- **5 tournament strategies:** freshly reset, Darwinian competition ongoing
+- **Quant brain:** 500+ trades analyzed, Bayesian learning on 25 signals
+- **Kelly criterion** position sizing: 10% optimal bet size calculated
+- **Top signal:** momentum5m_mild (46.2% WR, 130 trades)
+- **Worst signal:** volume_declining (20% WR) — auto-penalized by brain
+- **10 Bags API endpoints** integrated
+- **14 GitBook doc pages**
+- **Telegram alerts** — live buy/sell notifications
+- **Hourly sim reports** via cron
+- **Daily loss limit** (15% circuit breaker)
+- **Session-aware sizing** (US/EU full, Asia 75%, off-hours 50%)
+- **Self-tuning** — parameter optimizer runs every 30min
+- **Live at**: [autobags.io](https://autobags.io)
