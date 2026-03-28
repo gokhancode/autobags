@@ -261,8 +261,8 @@
 
   <!-- Settings -->
   <div class="panel">
-    <div class="panel-title collapsible" onclick="toggleSection('settings-body', this)" style="cursor:pointer; user-select:none;">
-      ⚙️ Bot Settings <span class="chevron" style="margin-left:auto; transition: transform .3s;">▾</span>
+    <div class="panel-title" onclick="toggleSection('settings-body', this)" style="cursor:pointer; user-select:none;">
+      ⚙️ Bot Settings <span class="chevron" style="margin-left:auto; font-size:12px; transition: transform .3s; transform: rotate(-90deg);">▶</span>
     </div>
     <div id="settings-body" style="display:none;">
 
@@ -338,8 +338,8 @@
 
   <!-- Recent trades -->
   <div class="panel">
-    <div class="panel-title collapsible" onclick="toggleSection('trades-body-wrap', this)" style="cursor:pointer; user-select:none;">
-      📊 Recent Trades <span class="chevron" style="margin-left:auto; transition: transform .3s;">▾</span>
+    <div class="panel-title" onclick="toggleSection('trades-body-wrap', this)" style="cursor:pointer; user-select:none;">
+      📊 Recent Trades <span class="chevron" style="margin-left:auto; font-size:12px; transition: transform .3s; transform: rotate(90deg);">▶</span>
     </div>
     <div id="trades-body-wrap">
     <table class="trades-table">
@@ -644,14 +644,11 @@
   function toggleSection(id, titleEl) {
     const body = document.getElementById(id);
     const chevron = titleEl.querySelector('.chevron');
-    if (body.style.display === 'none') {
-      body.style.display = '';
-      body.style.animation = 'fadeIn 0.25s ease';
-      chevron.style.transform = 'rotate(0deg)';
-    } else {
-      body.style.display = 'none';
-      chevron.style.transform = 'rotate(-90deg)';
-    }
+    const isHidden = body.style.display === 'none';
+    body.style.display = isHidden ? '' : 'none';
+    chevron.style.transform = isHidden ? 'rotate(90deg)' : 'rotate(-90deg)';
+    if (isHidden) body.style.animation = 'fadeIn 0.25s ease';
+    titleEl.style.marginBottom = isHidden ? '' : '0';
   }
 
   let lastPnl = null;
