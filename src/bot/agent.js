@@ -231,7 +231,18 @@ async function scout(userId, settings, positions) {
   const tokenFeed = await bags.getTokenFeed().catch(() => null);
   const tokens = Array.isArray(tokenFeed?.response) ? tokenFeed.response : [];
   const trending = intel.getTrendingTokens();
-  const allCandidates = [...tokens, ...trending].filter(t => t.tokenMint || t.mint || t.address);
+
+  // Add DexScreener boosted tokens (higher quality, real volume)
+  let boosted = [];
+  try {
+    const bRes = await fetch('https://api.dexscreener.com/token-boosts/top/v1');
+    const bData = await bRes.json();
+    boosted = (bData || []).filter(b => b.chainId === 'solana').slice(0, 30).map(b => ({
+      mint: b.tokenAddress, symbol: b.description?.split(' ')?.[0] || '???', source: 'dex-boosted'
+    }));
+  } catch {}
+
+  const allCandidates = [...boosted, ...tokens, ...trending].filter(t => t.tokenMint || t.mint || t.address);
 
   // Deduplicate
   const seen = new Set();
@@ -243,7 +254,7 @@ async function scout(userId, settings, positions) {
 
   console.log(`[Scout] ${userId}: checking ${candidates.length} candidates`);
 
-  for (const token of candidates.slice(0, 10)) {
+  for (const token of candidates.slice(0, 30)) {
     const mint   = token.tokenMint || token.mint || token.address;
     const symbol = token.symbol || token.ticker || mint.slice(0, 8);
     if (!mint) continue;
@@ -251,53 +262,71 @@ async function scout(userId, settings, positions) {
     // Blacklist check
     if (settings.blacklist?.includes(mint)) { continue; }
 
-    // Token age + market cap filter via DexScreener
+    // Single DexScreener fetch — filter + score in one pass
+    let score = 0;
     try {
       const dexRes = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${mint}`);
       const dexData = await dexRes.json();
-      const pair = dexData?.pairs?.[0];
-      if (pair) {
-        // Age filter
-        const pairCreated = pair.pairCreatedAt ? new Date(pair.pairCreatedAt).getTime() : 0;
+      const p = dexData?.pairs?.find(x => x.chainId === 'solana') || dexData?.pairs?.[0];
+      if (!p) continue;
+
+      // Age filter
+      if (settings.minTokenAgeMinutes || settings.maxTokenAgeHours) {
+        const pairCreated = p.pairCreatedAt ? new Date(p.pairCreatedAt).getTime() : 0;
         if (pairCreated > 0) {
           const ageMinutes = (Date.now() - pairCreated) / 60000;
-          if (settings.minTokenAgeMinutes && ageMinutes < settings.minTokenAgeMinutes) {
-            console.log(`[Scout] Skip ${symbol}: too young (${Math.round(ageMinutes)}m < ${settings.minTokenAgeMinutes}m)`);
-            continue;
-          }
-          if (settings.maxTokenAgeHours && ageMinutes > settings.maxTokenAgeHours * 60) {
-            continue; // silently skip old tokens
-          }
-        }
-        // Market cap filter
-        const mcap = pair.marketCap || pair.fdv || 0;
-        if (settings.minMarketCapUsd && mcap > 0 && mcap < settings.minMarketCapUsd) {
-          console.log(`[Scout] Skip ${symbol}: mcap $${mcap} < $${settings.minMarketCapUsd}`);
-          continue;
-        }
-        if (settings.maxMarketCapUsd && mcap > settings.maxMarketCapUsd) {
-          continue;
+          if (settings.minTokenAgeMinutes && ageMinutes < settings.minTokenAgeMinutes) continue;
+          if (settings.maxTokenAgeHours && ageMinutes > settings.maxTokenAgeHours * 60) continue;
         }
       }
-    } catch {}
 
-    // Score token (intel.py + enrichment data)
-    const [scoreResult, enrichment] = await Promise.all([
-      intel.scoreToken(mint, symbol).catch(() => ({ score: 0 })),
-      dataSources.enrichToken(mint, symbol).catch(() => ({ enrichmentScore: 0 }))
-    ]);
+      // Market cap filter
+      const mcapVal = parseFloat(p.marketCap || p.fdv || 0);
+      if (settings.minMarketCapUsd && mcapVal > 0 && mcapVal < settings.minMarketCapUsd) continue;
+      if (settings.maxMarketCapUsd && mcapVal > settings.maxMarketCapUsd) continue;
 
-    // Combined score: 60% intel + 40% enrichment
-    const intelScore = scoreResult?.score || 0;
-    const enrichScore = enrichment?.enrichmentScore || 0;
-    const score = Math.round(intelScore * 0.6 + enrichScore * 0.4);
+      const liq = parseFloat(p.liquidity?.usd || 0);
+      const vol24 = parseFloat(p.volume?.h24 || 0);
+      const m5 = parseFloat(p.priceChange?.m5) || 0;
+      const h1 = parseFloat(p.priceChange?.h1) || 0;
+      const txns = p.txns?.h1 || {};
+      const buys1h = txns.buys || 0;
+      const sells1h = txns.sells || 0;
+      const buyRatio = buys1h + sells1h > 0 ? buys1h / (buys1h + sells1h) : 0.5;
+
+      // Rug filters (hard block)
+      if (liq < 2000) continue;
+      if (vol24 / liq > 15) continue;
+      if (h1 < -25) continue;
+
+      // Require 5m momentum
+      if (m5 < 3) continue;
+
+      // Scoring (same as sim — proven profitable)
+      if (liq > 50000) score += 15; else if (liq > 20000) score += 10; else if (liq > 5000) score += 5;
+      if (vol24 > 100000) score += 15; else if (vol24 > 50000) score += 10; else if (vol24 > 10000) score += 5;
+      if (m5 > 10) score += 20; else if (m5 > 5) score += 15; else if (m5 > 3) score += 10;
+      if (h1 > 20) score += 15; else if (h1 > 10) score += 10; else if (h1 > 5) score += 5;
+      if (buyRatio > 0.70) score += 15; else if (buyRatio > 0.60) score += 10; else if (buyRatio > 0.55) score += 5;
+      if (mcapVal > 50000 && mcapVal < 2000000) score += 10; else if (mcapVal > 10000 && mcapVal < 5000000) score += 5;
+      if (buys1h + sells1h > 200) score += 10; else if (buys1h + sells1h > 50) score += 5;
+      if (m5 > 20) score -= 10;
+      if (h1 < -10) score -= 10;
+      if (buyRatio < 0.4) score -= 15;
+      score = Math.max(0, Math.min(100, score));
+    } catch { continue; }
 
     if (score < settings.minIntelScore) {
-      console.log(`[Scout] Skip ${symbol}: score ${score} (intel:${intelScore} enrich:${enrichScore}) < ${settings.minIntelScore}`);
+      console.log(`[Scout] Skip ${symbol}: score ${score} < ${settings.minIntelScore}`);
       continue;
     }
+    console.log(`[Scout] ✅ ${symbol} passed! Score: ${score} — proceeding to buy`);
 
-    const solToSpend = tradeable * (settings.maxSolPerTrade / 100);
+    // Check actual balance right before swap to avoid overspending
+    const freshBalance = await getSolBalance(userId);
+    const freshTradeable = freshBalance - GAS_RESERVE;
+    if (freshTradeable < 0.01) { console.log(`[Scout] ${userId}: insufficient balance for trade`); break; }
+    const solToSpend = Math.min(freshTradeable * (settings.maxSolPerTrade / 100), freshTradeable);
     const lamports   = Math.floor(solToSpend * LAMPORTS_PER_SOL);
 
     console.log(`[Scout] ${userId}: BUYING ${symbol} (score: ${score}) — ${solToSpend.toFixed(4)} SOL`);
@@ -346,9 +375,7 @@ async function scout(userId, settings, positions) {
       // Generate AI explanation async
       explainer.queueExplanation({
         type: 'BUY', symbol, mint, score, solAmount: solToSpend,
-        details: { safety: scoreResult.safety?.verdict, liquidity: scoreResult.liquidity?.verdict,
-                   holders: scoreResult.holders?.verdict, social: scoreResult.social?.verdict,
-                   momentum: scoreResult.momentum?.verdict, sentiment: scoreResult.market?.sentiment }
+        details: { score, source: 'dexscreener-sim-scoring' }
       }, (explanation) => {
         // Append explanation to trade record
         const trades = load(TRADES_FILE, []);
