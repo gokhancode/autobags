@@ -76,15 +76,17 @@ const PORT = process.env.PORT || 3500;
 app.listen(PORT, () => {
   console.log(`🤖 AUTOBAGS running on http://localhost:${PORT}`);
 
-  // Start trading agent (10s interval — high frequency)
-  const { start } = require('./bot/agent');
-  start(30000); // 30s tick — less RPC spam, fewer impulse trades
+  // Real agent DISABLED — paper trading only until proven profitable
+  // const { start } = require('./bot/agent');
+  // start(30000);
 
-  // Start paper trading simulator ($1000 high-freq)
-  const sim = require('./bot/simulator');
-  sim.start(15000);
+  // Paper trader — $2000 virtual, same scoring pipeline, no real swaps
+  const paper = require('./bot/paper-trader');
+  paper.start(30000);
 
-  // Start strategy tournament ($1000 split across 5 strategies)
-  const tournament = require('./bot/sim-strategies');
-  tournament.start(1000, 15000);
+  // Sim + tournament paused
+  // const sim = require('./bot/simulator');
+  // sim.start(15000);
+  // const tournament = require('./bot/sim-strategies');
+  // tournament.start(1000, 15000);
 });
