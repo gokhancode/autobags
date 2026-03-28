@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AUTOBAGS — Sim Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+  :root { --bg: #0a0a0f; --panel: #12121a; --border: #1e1e2e; --text: #e4e4ef; --muted: #6b6b8a; --accent: #6366f1; --accent2: #818cf8; --green: #22c55e; --red: #ef4444; --yellow: #eab308; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Inter', -apple-system, sans-serif; padding: 16px; max-width: 900px; margin: 0 auto; }
+  .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .header h1 { font-size: 20px; font-weight: 700; }
+  .header a { color: var(--muted); text-decoration: none; font-size: 13px; }
+  .header a:hover { color: var(--accent2); }
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 16px; }
+  .stat { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
+  .stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat-value { font-size: 22px; font-weight: 700; margin-top: 4px; font-family: 'Space Mono', monospace; }
+  .stat-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 12px; }
+  .panel-title { font-size: 14px; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .green { color: var(--green); }
+  .red { color: var(--red); }
+  .yellow { color: var(--yellow); }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { text-align: left; color: var(--muted); font-size: 10px; text-transform: uppercase; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+  td { padding: 8px; border-bottom: 1px solid var(--border); }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+  .badge-win { background: rgba(34,197,94,0.15); color: var(--green); }
+  .badge-loss { background: rgba(239,68,68,0.15); color: var(--red); }
+  #chart-container { position: relative; height: 300px; }
+  .positions-list { display: flex; flex-direction: column; gap: 8px; }
+  .pos-card { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: rgba(99,102,241,0.05); border: 1px solid var(--border); border-radius: 8px; }
+  .pos-symbol { font-weight: 700; font-size: 14px; }
+  .pos-meta { font-size: 11px; color: var(--muted); }
+  .refresh-btn { background: var(--accent); color: white; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+  .refresh-btn:hover { background: var(--accent2); }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>📊 Sim Dashboard</h1>
+  <div style="display:flex;gap:12px;align-items:center;">
+    <a href="/dashboard">← Dashboard</a>
+    <a href="/admin">Admin</a>
+    <button class="refresh-btn" onclick="loadAll()">↻ Refresh</button>
+  </div>
+</div>
+
+<div class="stats-grid">
+  <div class="stat">
+    <div class="stat-label">Balance</div>
+    <div class="stat-value" id="s-balance">—</div>
+    <div class="stat-sub" id="s-pnl">—</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Win Rate</div>
+    <div class="stat-value" id="s-winrate">—</div>
+    <div class="stat-sub" id="s-wl">—</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Total Trades</div>
+    <div class="stat-value" id="s-trades">—</div>
+    <div class="stat-sub" id="s-uptime">—</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Max Drawdown</div>
+    <div class="stat-value red" id="s-dd">—</div>
+    <div class="stat-sub" id="s-peak">—</div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-title">📈 Equity Curve</div>
+  <div id="chart-container">
+    <canvas id="equity-chart"></canvas>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-title">🎯 Open Positions</div>
+  <div class="positions-list" id="positions-list">
+    <div style="color:var(--muted); font-size:12px;">Loading...</div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-title">🏆 Tournament</div>
+  <div id="tournament-stats">
+    <div style="color:var(--muted); font-size:12px;">Loading...</div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-title">📋 Recent Trades</div>
+  <div style="overflow-x:auto;">
+    <table id="trades-table">
+      <thead><tr><th>Time</th><th>Type</th><th>Token</th><th>P&L</th><th>Reason</th></tr></thead>
+      <tbody id="trades-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const API = window.location.origin;
+let equityChart = null;
+
+async function loadStats() {
+  try {
+    const res = await fetch(`${API}/api/sim`);
+    const d = await res.json();
+    if (!d.success) return;
+
+    const pnlPct = parseFloat(d.totalPnlPct);
+    document.getElementById('s-balance').textContent = `$${parseFloat(d.totalEquity).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+    document.getElementById('s-balance').className = `stat-value ${pnlPct >= 0 ? 'green' : 'red'}`;
+    document.getElementById('s-pnl').innerHTML = `<span class="${pnlPct >= 0 ? 'green' : 'red'}">${pnlPct >= 0 ? '+' : ''}${pnlPct}%</span> from $${d.startBalanceUsd}`;
+    document.getElementById('s-winrate').textContent = `${d.winRate}%`;
+    document.getElementById('s-wl').textContent = `${d.wins}W / ${d.losses}L`;
+    document.getElementById('s-trades').textContent = d.totalTrades;
+    document.getElementById('s-uptime').textContent = d.runningFor;
+    document.getElementById('s-dd').textContent = `${d.maxDrawdown}%`;
+    document.getElementById('s-peak').textContent = `Peak: $${parseFloat(d.peakBalance).toFixed(0)}`;
+
+    // Open positions
+    const posList = document.getElementById('positions-list');
+    if (d.openPositions && d.openPositions.length > 0) {
+      posList.innerHTML = d.openPositions.map(p => `
+        <div class="pos-card">
+          <div>
+            <div class="pos-symbol">$${p.symbol}</div>
+            <div class="pos-meta">Score: ${p.score} · $${parseFloat(p.usdIn).toFixed(0)} · ${p.partialExited ? '½ exited' : 'full'}</div>
+          </div>
+          <div class="pos-meta">${new Date(p.entryTime).toLocaleTimeString()}</div>
+        </div>
+      `).join('');
+    } else {
+      posList.innerHTML = '<div style="color:var(--muted);font-size:12px;">No open positions</div>';
+    }
+
+    // Recent trades
+    const tbody = document.getElementById('trades-body');
+    const trades = (d.recentTrades || []).slice(0, 20);
+    tbody.innerHTML = trades.map(t => {
+      const pnl = t.pnlPct ? parseFloat(t.pnlPct) : null;
+      const pnlStr = pnl !== null ? `<span class="${pnl >= 0 ? 'badge badge-win' : 'badge badge-loss'}">${pnl >= 0 ? '+' : ''}${pnl}%</span>` : '—';
+      const time = new Date(t.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+      return `<tr><td>${time}</td><td>${t.type}</td><td>$${t.symbol}</td><td>${pnlStr}</td><td style="color:var(--muted);font-size:11px;">${t.reason || t.type}</td></tr>`;
+    }).join('');
+  } catch(e) { console.warn('Stats load failed:', e); }
+}
+
+async function loadEquity() {
+  try {
+    const res = await fetch(`${API}/api/sim/equity`);
+    const d = await res.json();
+    if (!d.success || !d.curve || d.curve.length < 2) return;
+
+    const labels = d.curve.map(p => new Date(p.time).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}));
+    const values = d.curve.map(p => p.balance);
+    const isUp = values[values.length-1] >= values[0];
+
+    if (equityChart) equityChart.destroy();
+    const ctx = document.getElementById('equity-chart').getContext('2d');
+    
+    const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+    gradient.addColorStop(0, isUp ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)');
+    gradient.addColorStop(1, 'rgba(10,10,15,0)');
+
+    equityChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          data: values,
+          borderColor: isUp ? '#22c55e' : '#ef4444',
+          backgroundColor: gradient,
+          borderWidth: 2,
+          fill: true,
+          pointRadius: 0,
+          tension: 0.3,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { 
+          callbacks: { label: (ctx) => `$${ctx.parsed.y.toFixed(2)}` }
+        }},
+        scales: {
+          x: { display: true, ticks: { maxTicksLimit: 8, color: '#6b6b8a', font: { size: 10 } }, grid: { display: false } },
+          y: { display: true, ticks: { color: '#6b6b8a', font: { size: 10 }, callback: v => '$' + v.toFixed(0) }, grid: { color: '#1e1e2e' } }
+        }
+      }
+    });
+  } catch(e) { console.warn('Equity load failed:', e); }
+}
+
+async function loadTournament() {
+  try {
+    const res = await fetch(`${API}/api/tournament`);
+    const d = await res.json();
+    if (!d.success) return;
+    const el = document.getElementById('tournament-stats');
+    const strats = d.strategies || {};
+    el.innerHTML = `<table style="width:100%"><thead><tr><th>Strategy</th><th>Balance</th><th>P&L</th><th>Positions</th></tr></thead><tbody>` +
+      Object.entries(strats).map(([k, s]) => {
+        const pnl = ((s.balanceUsd - s.startBalance) / s.startBalance * 100).toFixed(1);
+        const cls = parseFloat(pnl) >= 0 ? 'green' : 'red';
+        return `<tr><td>${s.emoji || ''} ${s.name}</td><td>$${s.balanceUsd.toFixed(0)}</td><td class="${cls}">${pnl}%</td><td>${Object.keys(s.positions || {}).length}</td></tr>`;
+      }).join('') +
+      `</tbody></table>`;
+  } catch(e) { console.warn('Tournament load failed:', e); }
+}
+
+function loadAll() { loadStats(); loadEquity(); loadTournament(); }
+loadAll();
+setInterval(loadAll, 30000);
+</script>
+</body>
+</html>

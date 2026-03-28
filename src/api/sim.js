@@ -18,6 +18,13 @@ router.get('/trades', (req, res) => {
   res.json({ success: true, trades: trades.reverse() });
 });
 
+// GET /api/sim/equity — equity curve data
+router.get('/equity', (req, res) => {
+  const state = sim.loadState();
+  if (!state) return res.json({ success: false, error: 'No sim state' });
+  res.json({ success: true, curve: state.equityCurve || [] });
+});
+
 // POST /api/sim/reset — reset with new balance
 router.post('/reset', (req, res) => {
   const balance = parseFloat(req.body.balanceUsd) || 1000;

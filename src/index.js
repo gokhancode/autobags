@@ -56,6 +56,14 @@ app.get('/autobags/admin', (req, res) => {
   res.sendFile(path.join(__dirname, 'web', 'admin.html'));
 });
 
+// Sim dashboard
+app.get('/sim', (req, res) => {
+  res.sendFile(path.join(__dirname, 'web', 'sim.html'));
+});
+app.get('/autobags/sim', (req, res) => {
+  res.sendFile(path.join(__dirname, 'web', 'sim.html'));
+});
+
 // Fallback to index.html (landing page)
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'web', 'index.html'));

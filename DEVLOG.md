@@ -219,3 +219,76 @@ Bags.fm API ←→ Solana RPC ←→ DexScreener ←→ Groq AI
 ---
 
 *More entries will be added as development continues.*
+
+---
+
+## Day 2 — March 28, 2026
+
+### 09:00 — Morning Review & Bug Fixes
+- Discovered tuner cron was broken overnight (`/usr/local/bin/node` → `/usr/bin/node`)
+- Fixed node path in all cron jobs — tuner now runs every 30 minutes
+- Reviewed overnight sim results: $1,127 (+12.7%), 249 trades, 42.9% win rate
+- Tournament strategies all lost 90%+ — reset all 5 to $200 each
+
+### 09:30 — Sim Dashboard (New Page)
+- Built `/sim` page with full Chart.js equity curve visualization
+- Real-time stats: balance, win rate, trades, max drawdown
+- Tournament leaderboard table (all 5 strategies compared)
+- Open positions display with score and entry time
+- Recent trades table with P&L badges
+- Auto-refreshes every 30 seconds
+
+### 10:00 — Equity Curve Tracking
+- Added `equityCurve` array to sim state — snapshots every 5 minutes
+- New API endpoint: `GET /api/sim/equity` returns full curve data
+- Chart.js line chart with gradient fill (green=profit, red=loss)
+- Keeps last 2000 data points (~7 days of history)
+
+### 10:15 — Telegram Trade Alerts
+- Wired up notifier.js to sim buy/sell events
+- Bot token + chat ID configured in .env
+- Buy alerts: token, amount, score, balance
+- Sell alerts: P&L %, reason, balance (only for significant trades >2%)
+- Filters out noise — no partial exit spam
+
+### 10:30 — Daily Loss Limit
+- Added 15% daily loss circuit breaker to simulator
+- Tracks daily P&L start balance, resets at midnight UTC
+- Pauses all new entries if down 15% in a day
+- Separate from the existing portfolio circuit breaker (which is cumulative)
+
+### 10:45 — Trading Hours / Session Weighting
+- Position sizing now adapts to market session:
+  - US hours (14-21 UTC): 100% size
+  - EU hours (08-16 UTC): 100% size  
+  - Asia hours (00-08 UTC): 75% size
+  - Off-hours: 50% size
+- Reduces exposure during low-liquidity periods
+
+### 11:00 — Hourly Reporting Cron
+- Set up cron: `scripts/sim-report.js` sends formatted report every hour to Telegram
+- Includes: balance, peak, win rate, trades, open positions, params
+- Uses `openclaw send` for delivery — survives session restarts
+
+### Current Architecture
+```
+autobags.io
+├── /           Landing page
+├── /dashboard  User trading dashboard
+├── /sim        Paper trading simulator + equity chart
+├── /admin      Admin panel
+└── /api/*      REST API (17 route groups)
+    ├── auth, settings, portfolio, trades
+    ├── sim, tournament, quant
+    ├── fees, launch, narratives
+    └── status, stats, sell, admin, subscribers
+```
+
+### Stats at End of Day 2 Morning Session
+- **Sim balance:** ~$1,639 (+64% from $1,000)
+- **Total sim trades:** 250+
+- **Win rate:** ~43%
+- **5 tournament strategies:** freshly reset, competing
+- **Quant brain:** 503 trades analyzed, tracking 25 signals
+- **Top signal:** momentum5m_mild (46.2% WR)
+- **Worst signal:** volume_declining (20% WR)

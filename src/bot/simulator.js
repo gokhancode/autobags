@@ -8,6 +8,7 @@ const path = require('path');
 const BagsClient = require('./bags-client');
 const { runIntel } = require('./intel-bridge');
 
+const { sendTelegram } = require('./notifier');
 const bags = new BagsClient(process.env.BAGS_API_KEY);
 const SIM_FILE = path.join(__dirname, '../../data/sim-state.json');
 const SIM_TRADES_FILE = path.join(__dirname, '../../data/sim-trades.json');
@@ -58,6 +59,9 @@ function initSim(startBalanceUsd) {
     minMomentum5m: 3,    // need 3%+ 5m momentum to enter
     portfolioStopPct: 15,// circuit breaker: pause if down 15% total
     paused: false,
+    equityCurve: [],     // [{time, balance}] snapshots every 5 min
+    dailyPnlStart: startBalanceUsd,  // reset daily for daily loss limit
+    dailyPnlDate: new Date().toISOString().slice(0, 10),
   };
   saveState(state);
   saveTrades([]);
@@ -199,8 +203,21 @@ async function scoreCandidates(candidates) {
 
 // ── Trade Execution (Paper) ──────────────────────────────────────────────
 
+function getSessionMultiplier() {
+  const hour = new Date().getUTCHours();
+  // US market hours (14:00-21:00 UTC) = full size
+  if (hour >= 14 && hour < 21) return 1.0;
+  // EU hours (08:00-16:00 UTC) = full size
+  if (hour >= 8 && hour < 16) return 1.0;
+  // Asia hours (00:00-08:00 UTC) = 75%
+  if (hour >= 0 && hour < 8) return 0.75;
+  // Off-hours = 50%
+  return 0.5;
+}
+
 function simBuy(state, candidate, priceUsd) {
-  const posSize = Math.min(state.maxPositionUsd, state.balanceUsd * 0.35);
+  const sessionMult = getSessionMultiplier();
+  const posSize = Math.min(state.maxPositionUsd * sessionMult, state.balanceUsd * 0.35);
   if (posSize < 5) return null; // min $5
 
   const tokens = posSize / priceUsd;
@@ -235,6 +252,7 @@ function simBuy(state, candidate, priceUsd) {
   saveTrades(trades);
 
   console.log(`[SIM] 🟢 BUY $${candidate.symbol} — $${posSize.toFixed(2)} @ $${priceUsd.toFixed(8)} (score: ${candidate.score})`);
+  sendTelegram(`🟢 <b>[SIM] BUY</b> $${candidate.symbol}\n💰 $${posSize.toFixed(2)} @ $${priceUsd.toFixed(8)}\n📊 Score: ${candidate.score}/100\n💼 Balance: $${state.balanceUsd.toFixed(2)}`).catch(()=>{});
   return trade;
 }
 
@@ -278,6 +296,10 @@ function simSell(state, mint, priceUsd, reason) {
 
   const emoji = pnlUsd >= 0 ? '🟢' : '🔴';
   console.log(`[SIM] ${emoji} SELL $${pos.symbol} — ${pnlPct >= 0 ? '+' : ''}${pnlPct.toFixed(1)}% ($${pnlUsd.toFixed(2)}) | ${reason} | Balance: $${state.balanceUsd.toFixed(2)}`);
+  // Only notify on significant trades (skip partials, notify wins and big losses)
+  if (Math.abs(pnlPct) > 2) {
+    sendTelegram(`${emoji} <b>[SIM] SELL</b> $${pos.symbol}\n📈 P&L: ${pnlPct >= 0 ? '+' : ''}${pnlPct.toFixed(1)}% ($${pnlUsd >= 0 ? '+' : ''}${pnlUsd.toFixed(2)})\n📋 ${reason}\n💼 Balance: $${state.balanceUsd.toFixed(2)}`).catch(()=>{});
+  }
   return trade;
 }
 
@@ -289,9 +311,42 @@ async function tick() {
 
   const now = Date.now();
 
+  // Daily loss limit reset
+  const today = new Date().toISOString().slice(0, 10);
+  if (state.dailyPnlDate !== today) {
+    const totalInPos = Object.values(state.positions).reduce((s, p) => s + p.usdAmount, 0);
+    state.dailyPnlStart = state.balanceUsd + totalInPos;
+    state.dailyPnlDate = today;
+    state.paused = false;
+    saveState(state);
+  }
+
+  // Equity curve snapshot (every 5 min)
+  if (!state.equityCurve) state.equityCurve = [];
+  const totalEquityNow = state.balanceUsd + Object.values(state.positions).reduce((s, p) => s + p.usdAmount, 0);
+  const lastSnap = state.equityCurve.length > 0 ? state.equityCurve[state.equityCurve.length - 1].time : 0;
+  if (now - lastSnap > 5 * 60 * 1000) {
+    state.equityCurve.push({ time: now, balance: parseFloat(totalEquityNow.toFixed(2)) });
+    // Keep last 2000 points (~7 days at 5min intervals)
+    if (state.equityCurve.length > 2000) state.equityCurve.splice(0, state.equityCurve.length - 2000);
+    saveState(state);
+  }
+
   // Portfolio circuit breaker
   const totalInPositions = Object.values(state.positions).reduce((s, p) => s + p.usdAmount, 0);
   const approxTotal = state.balanceUsd + totalInPositions;
+
+  // Daily loss limit (15% from day start)
+  if (state.dailyPnlStart > 0) {
+    const dailyPnlPct = ((approxTotal - state.dailyPnlStart) / state.dailyPnlStart) * 100;
+    if (dailyPnlPct <= -15 && !state.paused) {
+      state.paused = true;
+      saveState(state);
+      console.log(`[SIM] ⛔ DAILY LOSS LIMIT — down ${dailyPnlPct.toFixed(1)}% today, pausing until tomorrow`);
+      return;
+    }
+  }
+
   const portfolioPnlPct = ((approxTotal - state.startBalanceUsd) / state.startBalanceUsd) * 100;
   if (portfolioPnlPct <= -state.portfolioStopPct && !state.paused) {
     state.paused = true;
