@@ -322,6 +322,13 @@ async function scout(userId, settings, positions) {
     // Blacklist check
     if (settings.blacklist?.includes(mint)) { continue; }
 
+    // Per-token cooldown: don't rebuy a token within 30 minutes of selling it
+    if (!global._tokenCooldowns) global._tokenCooldowns = {};
+    const lastSold = global._tokenCooldowns[mint];
+    if (lastSold && Date.now() - lastSold < 30 * 60 * 1000) {
+      continue; // skip — sold this token recently
+    }
+
     // Single DexScreener fetch — filter + score in one pass
     let score = 0;
     try {
@@ -604,6 +611,10 @@ async function monitorPositions(userId, userPositions, settings, allPositions) {
 
         logTrade(userId, { type: 'SELL', symbol: pos.symbol, mint, reason, pricePct: realPnlPct, pnlSol, solReceived: actualReceived, signature: result.signature });
         notifier.notifySell({ userId, symbol: pos.symbol, reason, pnlSol, pnlPct: realPnlPct, signature: result.signature });
+        // Set per-token cooldown so we don't rebuy this token for 30 min
+        if (!global._tokenCooldowns) global._tokenCooldowns = {};
+        global._tokenCooldowns[mint] = Date.now();
+        console.log(`[Monitor] ${pos.symbol}: 30min cooldown set`);
         console.log(`[Agent] ✅ SELL ${pos.symbol} — P&L: ${pnlSol >= 0 ? '+' : ''}${pnlSol.toFixed(4)} SOL (${realPnlPct.toFixed(1)}%)`);
       } catch (err) {
         console.error(`[Agent] Sell failed for ${pos.symbol}:`, err.message);
