@@ -157,7 +157,10 @@ async function getTokenPrice(mint) {
   try {
     const r = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${mint}`);
     const d = await r.json();
-    const pair = d?.pairs?.find(p => p.chainId === 'solana') || d?.pairs?.[0];
+    // Always use highest-liquidity pair — random pair selection caused phantom P&L
+    const solPairs = (d?.pairs || []).filter(p => p.chainId === 'solana' && parseFloat(p.liquidity?.usd || 0) > 0);
+    solPairs.sort((a, b) => parseFloat(b.liquidity?.usd || 0) - parseFloat(a.liquidity?.usd || 0));
+    const pair = solPairs[0] || d?.pairs?.[0];
     return pair ? parseFloat(pair.priceUsd) : null;
   } catch { return null; }
 }
