@@ -23,22 +23,42 @@ const BAGS_KEY = process.env.BAGS_API_KEY;
 function load(file, def) { try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return def; } }
 function save(file, data) { fs.writeFileSync(file, JSON.stringify(data, null, 2)); }
 
-// Token price cache
+// Token price cache — keyed by pairAddress when available for consistency
 const priceCache = {};
+// Lock a mint to a specific pair address once we buy it
+const mintPairLock = {};
+
 async function getTokenPrice(mint) {
   const cached = priceCache[mint];
-  if (cached && Date.now() - cached.time < 30000) return cached.price;
+  if (cached && Date.now() - cached.time < 30000) return cached.priceNative;
   try {
+    const lockedPair = mintPairLock[mint];
+    
+    // If we have a locked pair, query it directly
+    if (lockedPair) {
+      const r = await fetch(`https://api.dexscreener.com/latest/dex/pairs/solana/${lockedPair}`);
+      const d = await r.json();
+      const pair = d?.pair || d?.pairs?.[0];
+      if (pair) {
+        const priceNative = parseFloat(pair.priceNative) || 0;
+        const price = parseFloat(pair.priceUsd) || 0;
+        priceCache[mint] = { price, priceNative, time: Date.now(), pairAddress: lockedPair };
+        return priceNative;
+      }
+    }
+    
+    // No lock — find highest liquidity pair and lock it
     const r = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${mint}`);
     const d = await r.json();
-    // ALWAYS use highest-liquidity Solana pair to avoid price inconsistency between ticks
     const solPairs = (d?.pairs || []).filter(p => p.chainId === 'solana' && parseFloat(p.liquidity?.usd || 0) > 0);
     solPairs.sort((a, b) => parseFloat(b.liquidity?.usd || 0) - parseFloat(a.liquidity?.usd || 0));
     const pair = solPairs[0] || d?.pairs?.[0];
     const price = pair ? parseFloat(pair.priceUsd) : 0;
     const priceNative = pair ? parseFloat(pair.priceNative) : 0;
-    priceCache[mint] = { price, priceNative, time: Date.now(), pair, pairAddress: pair?.pairAddress };
-    return priceNative; // return SOL price
+    const pairAddress = pair?.pairAddress;
+    if (pairAddress) mintPairLock[mint] = pairAddress;
+    priceCache[mint] = { price, priceNative, time: Date.now(), pairAddress };
+    return priceNative;
   } catch { return 0; }
 }
 
@@ -57,6 +77,11 @@ async function tick() {
 
   const settings = load(path.join(__dirname, '../../data/settings.json'), {}).testacc || {};
   const trades = load(TRADES_FILE, []);
+
+  // Restore pair locks from saved positions
+  for (const [mint, pos] of Object.entries(state.positions)) {
+    if (pos.pairAddress && !mintPairLock[mint]) mintPairLock[mint] = pos.pairAddress;
+  }
 
   // ── Monitor open positions first ───────────────────────────────────────
   for (const [mint, pos] of Object.entries(state.positions)) {
@@ -257,6 +282,10 @@ async function tick() {
       const solAfterSlippage = solToSpend * 1.005; // 0.5% slippage on buy
 
       state.balanceSol -= solAfterSlippage;
+      // Lock pair address for consistent pricing
+      const lockedPair = mintPairLock[mint] || priceCache[mint]?.pairAddress;
+      if (lockedPair) mintPairLock[mint] = lockedPair;
+      
       state.positions[mint] = {
         symbol, mint,
         entryPrice: priceNative,
@@ -266,6 +295,7 @@ async function tick() {
         score,
         partialExited: false,
         highPrice: priceNative,
+        pairAddress: lockedPair,
       };
       state.tokenBuyCounts[mint] = (state.tokenBuyCounts[mint] || 0) + 1;
       state.tokenCooldowns[mint] = Date.now();
