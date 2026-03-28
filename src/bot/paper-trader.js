@@ -293,6 +293,22 @@ async function tick() {
 }
 
 function start(intervalMs = 30000) {
+  // Seed buy counts from REAL trade history so we never rebuy addicted tokens
+  try {
+    const realTrades = load(path.join(__dirname, '../../data/trades.json'), []);
+    const state = load(STATE_FILE, { tokenBuyCounts: {} });
+    let seeded = 0;
+    realTrades.filter(t => t.type === 'BUY' && t.mint).forEach(t => {
+      const real = (state.tokenBuyCounts[t.mint] || 0);
+      // Only increase if real history has MORE buys than current count
+      const realCount = realTrades.filter(r => r.type === 'BUY' && r.mint === t.mint).length;
+      if (realCount > real) { state.tokenBuyCounts[t.mint] = realCount; seeded++; }
+    });
+    if (seeded > 0) { save(STATE_FILE, state); console.log(`[Paper] Seeded ${seeded} token buy counts from real trade history`); }
+    const blocked = Object.entries(state.tokenBuyCounts).filter(([,c]) => c >= 3);
+    if (blocked.length) console.log(`[Paper] ${blocked.length} tokens permanently blocked`);
+  } catch {}
+
   console.log('📝 AUTOBAGS Paper Trader started — $2000 virtual | interval:', intervalMs / 1000 + 's');
   tick().catch(console.error);
   return setInterval(() => tick().catch(console.error), intervalMs);
