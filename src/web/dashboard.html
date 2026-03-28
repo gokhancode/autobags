@@ -261,7 +261,10 @@
 
   <!-- Settings -->
   <div class="panel">
-    <div class="panel-title">⚙️ Bot Settings</div>
+    <div class="panel-title collapsible" onclick="toggleSection('settings-body', this)" style="cursor:pointer; user-select:none;">
+      ⚙️ Bot Settings <span class="chevron" style="margin-left:auto; transition: transform .3s;">▾</span>
+    </div>
+    <div id="settings-body" style="display:none;">
 
     <div class="toggle-row">
       <div><label>Bot active</label><small>Agent scouting and trading</small></div>
@@ -330,15 +333,20 @@
       <button class="save-btn" onclick="saveSettings()">Save settings</button>
       <span class="saved-msg" id="saved-msg">✅ Saved</span>
     </div>
+    </div><!-- /settings-body -->
   </div>
 
   <!-- Recent trades -->
   <div class="panel">
-    <div class="panel-title">📊 Recent Trades</div>
+    <div class="panel-title collapsible" onclick="toggleSection('trades-body-wrap', this)" style="cursor:pointer; user-select:none;">
+      📊 Recent Trades <span class="chevron" style="margin-left:auto; transition: transform .3s;">▾</span>
+    </div>
+    <div id="trades-body-wrap">
     <table class="trades-table">
       <thead><tr><th>Token</th><th>Type</th><th>Amount</th><th>P&L</th><th>Time</th><th></th><th>Tx</th></tr></thead>
       <tbody id="trades-body"><tr><td colspan="7" class="empty-state">No trades yet</td></tr></tbody>
     </table>
+    </div><!-- /trades-body-wrap -->
   </div>
 
   <!-- Export -->
@@ -631,6 +639,19 @@
       ctx.fillText(max.toFixed(4) + ' SOL', 4, 14);
       ctx.fillText(min.toFixed(4) + ' SOL', 4, h - 4);
     } catch (e) { console.warn('Equity load failed:', e); }
+  }
+
+  function toggleSection(id, titleEl) {
+    const body = document.getElementById(id);
+    const chevron = titleEl.querySelector('.chevron');
+    if (body.style.display === 'none') {
+      body.style.display = '';
+      body.style.animation = 'fadeIn 0.25s ease';
+      chevron.style.transform = 'rotate(0deg)';
+    } else {
+      body.style.display = 'none';
+      chevron.style.transform = 'rotate(-90deg)';
+    }
   }
 
   let lastPnl = null;
