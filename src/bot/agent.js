@@ -529,10 +529,16 @@ async function monitorPositions(userId, userPositions, settings, allPositions) {
         // Get actual on-chain token balance
         const { PublicKey } = require('@solana/web3.js');
         const pubkey = WalletManager.getPublicKey(userId);
-        const tokenAccounts = await rpc.withRetry(async (conn) => {
-          return conn.getParsedTokenAccountsByOwner(new PublicKey(pubkey), { mint: new PublicKey(mint) });
-        });
-        const tokenAmount = tokenAccounts.value?.[0]?.account?.data?.parsed?.info?.tokenAmount?.amount || '0';
+        let tokenAmount = '0';
+        for (const progId of ['TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA', 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb']) {
+          if (tokenAmount !== '0') break;
+          try {
+            const ta = await rpc.withRetry(async (conn) => {
+              return conn.getParsedTokenAccountsByOwner(new PublicKey(pubkey), { mint: new PublicKey(mint), programId: new PublicKey(progId) });
+            });
+            tokenAmount = ta.value?.[0]?.account?.data?.parsed?.info?.tokenAmount?.amount || '0';
+          } catch {}
+        }
         const halfTokens = Math.floor(parseInt(tokenAmount) / 2);
         if (halfTokens > 0) {
           const balBefore = await getSolBalance(userId, 'confirmed');
@@ -583,12 +589,16 @@ async function monitorPositions(userId, userPositions, settings, allPositions) {
         const { PublicKey } = require('@solana/web3.js');
         const pubkey = WalletManager.getPublicKey(userId);
         let tokensToSell = '0';
-        try {
-          const tokenAccounts = await rpc.withRetry(async (conn) => {
-            return conn.getParsedTokenAccountsByOwner(new PublicKey(pubkey), { mint: new PublicKey(mint) });
-          });
-          tokensToSell = tokenAccounts.value?.[0]?.account?.data?.parsed?.info?.tokenAmount?.amount || '0';
-        } catch {}
+        // Check both SPL and Token-2022 programs
+        for (const progId of ['TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA', 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb']) {
+          if (tokensToSell !== '0') break;
+          try {
+            const tokenAccounts = await rpc.withRetry(async (conn) => {
+              return conn.getParsedTokenAccountsByOwner(new PublicKey(pubkey), { mint: new PublicKey(mint), programId: new PublicKey(progId) });
+            });
+            tokensToSell = tokenAccounts.value?.[0]?.account?.data?.parsed?.info?.tokenAmount?.amount || '0';
+          } catch {}
+        }
         if (tokensToSell === '0') { console.error(`[Monitor] No tokens found for ${pos.symbol}`); continue; }
         
         // Measure ACTUAL SOL received — wait for tx confirmation first

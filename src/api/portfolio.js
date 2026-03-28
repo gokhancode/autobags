@@ -87,17 +87,23 @@ router.get('/:userId', async (req, res) => {
       let onChainAmount = null;
       let decimals = 6;
 
-      // Step 1: Get ACTUAL on-chain token balance
-      try {
-        const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
-          new PublicKey(walletPublicKey),
-          { mint: new PublicKey(mint) }
-        );
-        const info = tokenAccounts.value?.[0]?.account?.data?.parsed?.info;
-        onChainAmount = info?.tokenAmount?.amount || '0';
-        decimals = info?.tokenAmount?.decimals || 6;
-      } catch {
-        onChainAmount = '0';
+      // Step 1: Get ACTUAL on-chain token balance (try both SPL and Token-2022)
+      for (const programId of [
+        'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
+        'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb'
+      ]) {
+        if (onChainAmount && onChainAmount !== '0') break;
+        try {
+          const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+            new PublicKey(walletPublicKey),
+            { mint: new PublicKey(mint), programId: new PublicKey(programId) }
+          );
+          const info = tokenAccounts.value?.[0]?.account?.data?.parsed?.info;
+          if (info?.tokenAmount?.amount && info.tokenAmount.amount !== '0') {
+            onChainAmount = info.tokenAmount.amount;
+            decimals = info.tokenAmount.decimals || 6;
+          }
+        } catch {}
       }
 
       if (!onChainAmount || onChainAmount === '0') continue;
