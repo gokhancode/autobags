@@ -80,8 +80,8 @@ app.listen(PORT, () => {
   // const { start } = require('./bot/agent');
   // start(30000);
 
-  // Paper trader — $2000 virtual, same scoring pipeline, no real swaps
-  const paper = require('./bot/paper-trader');
+  // Paper trader v2 — rebuilt scoring, pair locking, volume acceleration
+  const paper = require('./bot/paper-trader-v2');
   paper.start(30000);
 
   // Sim + tournament paused
