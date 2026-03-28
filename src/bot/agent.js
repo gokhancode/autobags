@@ -23,6 +23,9 @@ const priceFeed    = require('./ws-feed');
 const jito         = require('./jito');
 const rugDetector  = require('./rug-detector');
 const dynParams    = require('./dynamic-params');
+const patternRec   = require('./pattern-recognition');
+const holderTrack  = require('./holder-tracker');
+const jupiterApi   = require('./jupiter');
 
 const BAGS_KEY     = process.env.BAGS_API_KEY;
 const PARTNER_KEY  = process.env.BAGS_PARTNER_KEY;
@@ -391,6 +394,18 @@ async function scout(userId, settings, positions) {
           score += Math.min(15, ws.score);
           console.log(`[Scout] 🐋 ${symbol}: whale signal +${ws.score} (${ws.whales.join(', ')})`);
         }
+      } catch {}
+
+      // Bonus: Pattern recognition (trained on past trades)
+      try {
+        const pr = patternRec.scorePattern(p);
+        if (pr.score !== 0) score += pr.score;
+      } catch {}
+
+      // Bonus: Holder growth rate
+      try {
+        const hg = await holderTrack.scoreHolderGrowth(mint);
+        if (hg.score !== 0) score += hg.score;
       } catch {}
 
       score = Math.max(0, Math.min(100, score));
