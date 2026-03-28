@@ -129,7 +129,7 @@ async function getTokenPrice(mint) {
   try {
     const r = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${mint}`);
     const d = await r.json();
-    const pair = d?.pairs?.[0];
+    const pair = d?.pairs?.find(p => p.chainId === 'solana') || d?.pairs?.[0];
     return pair ? parseFloat(pair.priceUsd) : null;
   } catch { return null; }
 }
@@ -344,50 +344,22 @@ async function scout(userId, settings, positions) {
 
       console.log(`[Scout] ${userId}: Actually spent ${actualSpent.toFixed(6)} SOL (intended ${solToSpend.toFixed(4)})`);
 
-      // Record position with ACTUAL spend
+      // Record position with ACTUAL spend — no accumulation, one buy per position
       if (!positions[userId]) positions[userId] = {};
-      const existing = positions[userId][mint];
-      if (existing) {
-        const totalSol = existing.solSpent + actualSpent;
-        const avgEntry = existing.entryPrice && entryPrice
-          ? (existing.entryPrice * existing.solSpent + entryPrice * actualSpent) / totalSol
-          : entryPrice || existing.entryPrice;
-        positions[userId][mint] = {
-          ...existing,
-          entryPrice: avgEntry,
-          entryPriceSOL: totalSol,
-          solSpent: totalSol,
-          score: Math.max(existing.score, score),
-          signature: result.signature
-        };
-      } else {
-        positions[userId][mint] = {
-          symbol,
-          mint,
-          entryPrice,
-          entryPriceSOL: actualSpent,
-          solSpent: actualSpent,
-          entryTime: new Date().toISOString(),
-          score,
-          partialExited: false,
-          highPrice: entryPrice,
-          signature: result.signature
-        };
-      }
+      positions[userId][mint] = {
+        symbol,
+        mint,
+        entryPrice,
+        solSpent: actualSpent,
+        entryTime: new Date().toISOString(),
+        score,
+        partialExited: false,
+        highPrice: entryPrice,
+        signature: result.signature
+      };
 
-      // Generate AI explanation async
-      explainer.queueExplanation({
-        type: 'BUY', symbol, mint, score, solAmount: solToSpend,
-        details: { score, source: 'dexscreener-sim-scoring' }
-      }, (explanation) => {
-        // Append explanation to trade record
-        const trades = load(TRADES_FILE, []);
-        const idx = trades.findLastIndex(t => t.signature === result.signature);
-        if (idx >= 0) { trades[idx].explanation = explanation; save(TRADES_FILE, trades); }
-      });
-
-      logTrade(userId, { type: 'BUY', symbol, mint, solAmount: solToSpend, score, signature: result.signature, entryPrice, explanation: 'Generating...' });
-      notifier.notifyBuy({ userId, symbol, score, solAmount: solToSpend, signature: result.signature });
+      logTrade(userId, { type: 'BUY', symbol, mint, solAmount: actualSpent, score, signature: result.signature, entryPrice });
+      notifier.notifyBuy({ userId, symbol, score, solAmount: actualSpent, signature: result.signature });
       console.log(`[Agent] ✅ BUY ${symbol} — sig: ${result.signature?.slice(0, 20)}...`);
       break; // one buy per tick
     } catch (err) {
@@ -415,17 +387,33 @@ async function monitorPositions(userId, userPositions, settings, allPositions) {
     // Take profit
     if (pricePct >= settings.takeProfitPct) { shouldSell = true; reason = `take profit (+${pricePct.toFixed(1)}%)`; }
 
-    // Partial exit (30% at partialExitPct threshold)
-    if (!pos.partialExited && pricePct >= settings.partialExitPct) {
+    // Partial exit (50% at partialExitPct threshold) — matches sim
+    if (!pos.partialExited && pricePct >= settings.partialExitPct && !shouldSell) {
       console.log(`[Monitor] Partial exit ${pos.symbol} at +${pricePct.toFixed(1)}%`);
       try {
-        const partialLamports = Math.floor(BigInt(pos.tokensReceived) * 30n / 100n);
-        await executeSwap(userId, mint, SOL_MINT, Number(partialLamports), settings.slippageBps);
-        allPositions[userId][mint].partialExited = true;
-        logTrade(userId, { type: 'PARTIAL_SELL', symbol: pos.symbol, mint, reason: 'partial_exit', pricePct });
+        // Get actual on-chain token balance
+        const { PublicKey } = require('@solana/web3.js');
+        const pubkey = WalletManager.getPublicKey(userId);
+        const tokenAccounts = await rpc.withRetry(async (conn) => {
+          return conn.getParsedTokenAccountsByOwner(new PublicKey(pubkey), { mint: new PublicKey(mint) });
+        });
+        const tokenAmount = tokenAccounts.value?.[0]?.account?.data?.parsed?.info?.tokenAmount?.amount || '0';
+        const halfTokens = Math.floor(parseInt(tokenAmount) / 2);
+        if (halfTokens > 0) {
+          const balBefore = await getSolBalance(userId);
+          await executeSwap(userId, mint, SOL_MINT, halfTokens, settings.slippageBps);
+          const balAfter = await getSolBalance(userId);
+          const received = Math.max(0, balAfter - balBefore);
+          allPositions[userId][mint].partialExited = true;
+          allPositions[userId][mint].solSpent = pos.solSpent / 2; // halve the cost basis
+          save(POSITIONS_FILE, allPositions);
+          logTrade(userId, { type: 'PARTIAL_SELL', symbol: pos.symbol, mint, reason: 'partial_exit', pricePct, solReceived: received });
+          console.log(`[Monitor] Partial exit done — received ${received.toFixed(6)} SOL`);
+        }
       } catch (err) {
         console.error(`[Monitor] Partial exit failed:`, err.message);
       }
+      continue; // sim does continue after partial
     }
 
     // Max hold time exit
@@ -454,9 +442,20 @@ async function monitorPositions(userId, userPositions, settings, allPositions) {
     if (shouldSell) {
       console.log(`[Monitor] ${userId}: SELLING ${pos.symbol} — ${reason}`);
       try {
+        // Get ACTUAL on-chain token balance to sell
+        const { PublicKey } = require('@solana/web3.js');
+        const pubkey = WalletManager.getPublicKey(userId);
+        let tokensToSell = '0';
+        try {
+          const tokenAccounts = await rpc.withRetry(async (conn) => {
+            return conn.getParsedTokenAccountsByOwner(new PublicKey(pubkey), { mint: new PublicKey(mint) });
+          });
+          tokensToSell = tokenAccounts.value?.[0]?.account?.data?.parsed?.info?.tokenAmount?.amount || '0';
+        } catch {}
+        if (tokensToSell === '0') { console.error(`[Monitor] No tokens found for ${pos.symbol}`); continue; }
+        
         // Measure ACTUAL SOL received
         const balBefore = await getSolBalance(userId);
-        const tokensToSell = pos.tokensReceived || '0';
         const result = await executeSwap(userId, mint, SOL_MINT, Number(tokensToSell), settings.slippageBps);
         const balAfter = await getSolBalance(userId);
         const actualReceived = Math.max(0, balAfter - balBefore);
