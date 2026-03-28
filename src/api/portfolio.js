@@ -128,6 +128,11 @@ router.get('/:userId', async (req, res) => {
   }
 
   const totalWorthSol = parseFloat((balanceSol + holdingsValueSol).toFixed(6));
+  
+  // P&L based on DEPOSITS vs CURRENT WORTH — the only honest calculation
+  const depositedSol = 1.192; // TODO: track deposits from on-chain tx history
+  const realPnlSol = parseFloat((totalWorthSol - depositedSol).toFixed(6));
+  const realPnlPct = parseFloat(((realPnlSol / depositedSol) * 100).toFixed(2));
 
   res.json({
     success:      true,
@@ -136,12 +141,11 @@ router.get('/:userId', async (req, res) => {
     balanceSol:    parseFloat(balanceSol.toFixed(6)),
     holdingsValueSol: parseFloat(holdingsValueSol.toFixed(6)),
     totalWorthSol,
-    depositedSol:  1.192, // TODO: track deposits properly
-    pnlSol:       parseFloat((totalWorthSol - 1.192).toFixed(6)),
-    pnlPct:       parseFloat(((totalWorthSol - 1.192) / 1.192 * 100).toFixed(2)),
+    depositedSol,
+    totalPnlSol:  realPnlSol.toFixed(4),
+    totalPnlPct:  realPnlPct,
     openPositions,
     totalTrades:  userTrades.length,
-    totalPnlSol:  totalPnl.toFixed(4),
     winRate,
     recentTrades: userTrades.slice(-5).reverse()
   });

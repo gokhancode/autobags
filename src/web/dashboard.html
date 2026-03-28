@@ -377,8 +377,9 @@
       document.getElementById('d-worth').textContent    = data.totalWorthSol != null ? data.totalWorthSol + ' SOL' : '—';
       document.getElementById('d-balance').textContent  = data.balanceSol != null ? data.balanceSol + ' SOL' : '—';
       document.getElementById('d-holdings').textContent = data.holdingsValueSol != null ? data.holdingsValueSol + ' SOL' : '0 SOL';
-      document.getElementById('d-pnl').textContent      = data.totalPnlSol + ' SOL';
-      document.getElementById('d-pnl').className        = 'card-value ' + (parseFloat(data.totalPnlSol) >= 0 ? 'green' : 'red');
+      const pnlVal = parseFloat(data.totalPnlSol);
+      document.getElementById('d-pnl').textContent      = `${pnlVal >= 0 ? '+' : ''}${data.totalPnlSol} SOL (${data.totalPnlPct >= 0 ? '+' : ''}${data.totalPnlPct}%)`;
+      document.getElementById('d-pnl').className        = 'card-value ' + (pnlVal >= 0 ? 'green' : 'red');
       document.getElementById('d-trades').textContent   = data.totalTrades;
       document.getElementById('d-winrate').textContent  = data.winRate || '—';
       if (data.walletPublicKey) document.getElementById('d-address').textContent = data.walletPublicKey;
