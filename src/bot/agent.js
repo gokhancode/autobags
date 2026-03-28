@@ -343,6 +343,13 @@ async function scout(userId, settings, positions) {
       console.log(`[Scout] Skip ${symbol}: score ${score} < ${settings.minIntelScore}`);
       continue;
     }
+
+    // DUPLICATE-MINT CHECK — never buy something we already hold
+    if (positions[userId] && positions[userId][mint]) {
+      console.log(`[Scout] Skip ${symbol}: already holding this token`);
+      continue;
+    }
+
     console.log(`[Scout] ✅ ${symbol} passed! Score: ${score} — proceeding to buy`);
 
     // Check actual balance right before swap to avoid overspending
@@ -367,8 +374,19 @@ async function scout(userId, settings, positions) {
 
       console.log(`[Scout] ${userId}: Actually spent ${actualSpent.toFixed(6)} SOL (intended ${solToSpend.toFixed(4)})`);
 
-      // Record position with ACTUAL spend — no accumulation, one buy per position
+      // Record position — accumulate if already held (shouldn't happen with mint check but safety net)
       if (!positions[userId]) positions[userId] = {};
+      if (positions[userId][mint]) {
+        // Accumulate — add to existing position
+        const existing = positions[userId][mint];
+        existing.solSpent = (existing.solSpent || 0) + actualSpent;
+        existing.entryPrice = (existing.entryPrice + entryPrice) / 2; // avg
+        console.log(`[Agent] Accumulated into ${symbol}: total spent ${existing.solSpent.toFixed(6)} SOL`);
+        save(POSITIONS_FILE, positions);
+        logTrade(userId, { type: 'BUY', symbol, mint, solAmount: actualSpent, score, signature: result.signature, entryPrice });
+        notifier.notifyBuy({ userId, symbol, score, solAmount: actualSpent, signature: result.signature });
+        break;
+      }
       positions[userId][mint] = {
         symbol,
         mint,
