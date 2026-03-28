@@ -210,11 +210,13 @@ async function scout(userId, settings, positions) {
     }
   }
 
-  // Check daily loss limit — based on ACTUAL wallet balance vs deposit, not trade history
+  // Check daily loss limit — wallet balance + open positions vs deposit
   if (settings.dailyLossLimitPct > 0) {
     const balance = await getSolBalance(userId, 'confirmed');
+    const openSol = Object.values(positions[userId] || {}).reduce((s, p) => s + (p.solSpent || 0), 0);
+    const totalWorth = balance + openSol; // approximate: assume open positions worth at least cost basis
     const deposited = settings.depositedSol || 1.192;
-    const totalPnlPct = ((balance - deposited) / deposited) * 100;
+    const totalPnlPct = ((totalWorth - deposited) / deposited) * 100;
     if (totalPnlPct <= -settings.dailyLossLimitPct) {
       console.log(`[Scout] ${userId}: daily loss limit hit (${totalPnlPct.toFixed(1)}% from deposit)`);
       return;
