@@ -47,7 +47,8 @@ function getSettings(userId) {
     stopLossPct:8, takeProfitPct:25, partialExitPct:10,
     maxSolPerTrade:80, minIntelScore:65, slippageBps:100, maxPositions:1,
     // New settings
-    dailyLossLimitPct: 0,     // 0 = disabled, otherwise stop trading if down X% today
+    dailyLossLimitPct: 15,    // stop trading if wallet down X% from deposit
+    depositedSol: 1.192,     // total SOL deposited to wallet
     tradingHoursStart: 0,     // UTC hour (0-23), 0 = no restriction
     tradingHoursEnd: 0,       // UTC hour (0-23), 0 = no restriction
     minTokenAgeMinutes: 5,    // min token age in minutes
@@ -209,15 +210,13 @@ async function scout(userId, settings, positions) {
     }
   }
 
-  // Check daily loss limit
+  // Check daily loss limit — based on ACTUAL wallet balance vs deposit, not trade history
   if (settings.dailyLossLimitPct > 0) {
-    const today = new Date().toISOString().slice(0, 10);
-    const trades = load(TRADES_FILE, []);
-    const todayTrades = trades.filter(t => t.userId === userId && t.timestamp?.startsWith(today));
-    const todayPnl = todayTrades.reduce((s, t) => s + (t.pnlSol || 0), 0);
-    const balance = await getSolBalance(userId);
-    if (balance > 0 && todayPnl < 0 && Math.abs(todayPnl / balance) * 100 >= settings.dailyLossLimitPct) {
-      console.log(`[Scout] ${userId}: daily loss limit hit (${todayPnl.toFixed(4)} SOL)`);
+    const balance = await getSolBalance(userId, 'confirmed');
+    const deposited = settings.depositedSol || 1.192;
+    const totalPnlPct = ((balance - deposited) / deposited) * 100;
+    if (totalPnlPct <= -settings.dailyLossLimitPct) {
+      console.log(`[Scout] ${userId}: daily loss limit hit (${totalPnlPct.toFixed(1)}% from deposit)`);
       return;
     }
   }
