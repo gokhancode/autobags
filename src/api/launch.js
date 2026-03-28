@@ -40,11 +40,12 @@ router.post('/full', auth.requireAuth, async (req, res) => {
 
     // Step 1: Create token metadata + get mint
     console.log('[Launch] Step 1: Creating token metadata...');
+    const DEFAULT_IMG = 'https://autobags.io/logo.svg';
     const tokenInfo = await sdk.tokenLaunch.createTokenInfoAndMetadata({
       name,
       symbol: symbol.toUpperCase(),
       description: (description ? description + ' | ' : '') + 'Launched using autobags.io 🤖',
-      imageUrl: imageUrl || undefined,
+      imageUrl: imageUrl || DEFAULT_IMG,
       twitter: twitter || undefined,
       telegram: telegram || undefined,
       website: website ? website : 'https://autobags.io',
