@@ -136,15 +136,27 @@ async function getTokenPrice(mint) {
 
 // ── SOL balance ────────────────────────────────────────────────────────────────
 
-async function getSolBalance(userId) {
+async function getSolBalance(userId, commitment = 'confirmed') {
   try {
     const { PublicKey } = require('@solana/web3.js');
     const pubkey = WalletManager.getPublicKey(userId);
     return await rpc.withRetry(async (conn) => {
-      const lamports = await conn.getBalance(new PublicKey(pubkey));
+      const lamports = await conn.getBalance(new PublicKey(pubkey), commitment);
       return lamports / LAMPORTS_PER_SOL;
     });
   } catch { return 0; }
+}
+
+async function waitForConfirmation(signature, timeoutMs = 30000) {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    try {
+      const status = await rpc.withRetry(async (conn) => conn.getSignatureStatus(signature));
+      if (status?.value?.confirmationStatus === 'confirmed' || status?.value?.confirmationStatus === 'finalized') return true;
+    } catch {}
+    await new Promise(r => setTimeout(r, 2000));
+  }
+  return false;
 }
 
 // ── Main agent tick ───────────────────────────────────────────────────────────
@@ -335,10 +347,12 @@ async function scout(userId, settings, positions) {
 
     try {
       // Check balance BEFORE swap
-      const balBefore = await getSolBalance(userId);
+      const balBefore = await getSolBalance(userId, 'confirmed');
       const result = await executeSwap(userId, SOL_MINT, mint, lamports, settings.slippageBps);
-      // Check balance AFTER swap — this is the ACTUAL amount spent
-      const balAfter = await getSolBalance(userId);
+      // Wait for tx to confirm before checking balance
+      if (result.signature) await waitForConfirmation(result.signature);
+      await new Promise(r => setTimeout(r, 3000));
+      const balAfter = await getSolBalance(userId, 'confirmed');
       const actualSpent = Math.max(0, balBefore - balAfter);
       const entryPrice = await getTokenPrice(mint);
 
@@ -400,9 +414,11 @@ async function monitorPositions(userId, userPositions, settings, allPositions) {
         const tokenAmount = tokenAccounts.value?.[0]?.account?.data?.parsed?.info?.tokenAmount?.amount || '0';
         const halfTokens = Math.floor(parseInt(tokenAmount) / 2);
         if (halfTokens > 0) {
-          const balBefore = await getSolBalance(userId);
-          await executeSwap(userId, mint, SOL_MINT, halfTokens, settings.slippageBps);
-          const balAfter = await getSolBalance(userId);
+          const balBefore = await getSolBalance(userId, 'confirmed');
+          const partialResult = await executeSwap(userId, mint, SOL_MINT, halfTokens, settings.slippageBps);
+          if (partialResult.signature) await waitForConfirmation(partialResult.signature);
+          await new Promise(r => setTimeout(r, 3000));
+          const balAfter = await getSolBalance(userId, 'confirmed');
           const received = Math.max(0, balAfter - balBefore);
           allPositions[userId][mint].partialExited = true;
           allPositions[userId][mint].solSpent = pos.solSpent / 2; // halve the cost basis
@@ -454,10 +470,12 @@ async function monitorPositions(userId, userPositions, settings, allPositions) {
         } catch {}
         if (tokensToSell === '0') { console.error(`[Monitor] No tokens found for ${pos.symbol}`); continue; }
         
-        // Measure ACTUAL SOL received
-        const balBefore = await getSolBalance(userId);
+        // Measure ACTUAL SOL received — wait for tx confirmation first
+        const balBefore = await getSolBalance(userId, 'confirmed');
         const result = await executeSwap(userId, mint, SOL_MINT, Number(tokensToSell), settings.slippageBps);
-        const balAfter = await getSolBalance(userId);
+        if (result.signature) await waitForConfirmation(result.signature);
+        await new Promise(r => setTimeout(r, 3000)); // extra buffer for RPC
+        const balAfter = await getSolBalance(userId, 'confirmed');
         const actualReceived = Math.max(0, balAfter - balBefore);
         const pnlSol = actualReceived - pos.solSpent;
 
