@@ -43,11 +43,11 @@ router.post('/full', auth.requireAuth, async (req, res) => {
     const tokenInfo = await sdk.tokenLaunch.createTokenInfoAndMetadata({
       name,
       symbol: symbol.toUpperCase(),
-      description: description || `Launched via AUTOBAGS`,
+      description: (description ? description + ' | ' : '') + 'Launched using autobags.io 🤖',
       imageUrl: imageUrl || undefined,
       twitter: twitter || undefined,
       telegram: telegram || undefined,
-      website: website || undefined,
+      website: website ? website : 'https://autobags.io',
     });
 
     if (!tokenInfo?.ipfsUrl || !tokenInfo?.tokenMint) {
@@ -143,7 +143,7 @@ router.post('/create-token', auth.requireAuth, async (req, res) => {
     const tokenInfo = await sdk.tokenLaunch.createTokenInfoAndMetadata({
       name,
       symbol: symbol.toUpperCase(),
-      description: description || `Launched via AUTOBAGS`,
+      description: (description ? description + ' | ' : '') + 'Launched using autobags.io 🤖',
       imageUrl: imageUrl || undefined,
     });
 
