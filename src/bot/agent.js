@@ -162,7 +162,15 @@ async function waitForConfirmation(signature, timeoutMs = 30000) {
 
 // ── Main agent tick ───────────────────────────────────────────────────────────
 
+let tickLock = false;
+
 async function tick() {
+  if (tickLock) { console.log('[Agent] Tick skipped — previous still running'); return; }
+  tickLock = true;
+  try { await _tick(); } finally { tickLock = false; }
+}
+
+async function _tick() {
   const users = getActiveUsers();
   if (!users.length) return;
 
