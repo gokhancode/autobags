@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#7c3aed"/>
+      <stop offset="100%" style="stop-color:#6d28d9"/>
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="512" height="512" rx="128" fill="url(#bg3)"/>
+  <!-- Chart candlesticks -->
+  <rect x="120" y="240" width="24" height="80" rx="4" fill="white" opacity="0.3"/>
+  <rect x="120" y="200" width="24" height="120" rx="4" fill="#22c55e" opacity="0.8"/>
+  <rect x="168" y="260" width="24" height="60" rx="4" fill="white" opacity="0.3"/>
+  <rect x="168" y="230" width="24" height="90" rx="4" fill="#ef4444" opacity="0.7"/>
+  <rect x="216" y="220" width="24" height="100" rx="4" fill="white" opacity="0.3"/>
+  <rect x="216" y="180" width="24" height="140" rx="4" fill="#22c55e" opacity="0.8"/>
+  <rect x="264" y="200" width="24" height="80" rx="4" fill="white" opacity="0.3"/>
+  <rect x="264" y="160" width="24" height="120" rx="4" fill="#22c55e" opacity="0.9"/>
+  <rect x="312" y="240" width="24" height="60" rx="4" fill="white" opacity="0.3"/>
+  <rect x="312" y="210" width="24" height="90" rx="4" fill="#ef4444" opacity="0.6"/>
+  <rect x="360" y="180" width="24" height="120" rx="4" fill="white" opacity="0.3"/>
+  <rect x="360" y="140" width="24" height="160" rx="4" fill="#22c55e" opacity="0.9"/>
+  <!-- Robot eye overlay -->
+  <circle cx="256" cy="240" r="60" fill="none" stroke="white" stroke-width="6" opacity="0.9"/>
+  <circle cx="256" cy="240" r="24" fill="white" opacity="0.9"/>
+  <circle cx="256" cy="240" r="12" fill="#7c3aed"/>
+  <!-- Scan lines from eye -->
+  <line x1="196" y1="240" x2="100" y2="240" stroke="white" stroke-width="2" opacity="0.3" stroke-dasharray="8,4"/>
+  <line x1="316" y1="240" x2="412" y2="240" stroke="white" stroke-width="2" opacity="0.3" stroke-dasharray="8,4"/>
+  <!-- Text -->
+  <text x="256" y="430" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-weight="900" font-size="56" fill="white" letter-spacing="2">AUTOBAGS</text>
+</svg>

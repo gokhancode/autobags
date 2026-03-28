@@ -11,7 +11,7 @@ let cacheTime = 0;
 const CACHE_TTL = 10 * 60 * 1000; // 10 min cache
 
 // GET /api/narratives — get current hot narratives + launch ideas
-router.get('/', auth.requireAuth, async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const now = Date.now();
     const forceRefresh = req.query.refresh === 'true';

@@ -51,12 +51,18 @@ router.post('/full', auth.requireAuth, async (req, res) => {
       website: website ? website : 'https://autobags.io',
     });
 
-    if (!tokenInfo?.ipfsUrl || !tokenInfo?.tokenMint) {
+    console.log('[Launch] Metadata result:', JSON.stringify(tokenInfo).slice(0, 300));
+    
+    // SDK returns { tokenMint, tokenMetadata, tokenLaunch }
+    const mint = tokenInfo?.tokenMint || tokenInfo?.tokenLaunch?.tokenMint;
+    const ipfs = tokenInfo?.tokenMetadata || tokenInfo?.ipfsUrl;
+    
+    if (!mint) {
       return res.status(500).json({ error: 'Failed to create token metadata', raw: tokenInfo });
     }
 
-    console.log(`[Launch] Metadata created: mint=${tokenInfo.tokenMint}, ipfs=${tokenInfo.ipfsUrl}`);
-    const tokenMint = new PublicKey(tokenInfo.tokenMint);
+    console.log(`[Launch] Metadata created: mint=${mint}, ipfs=${ipfs}`);
+    const tokenMint = new PublicKey(mint);
 
     // Step 2: Create fee share config (creator gets 100% of fees)
     console.log('[Launch] Step 2: Creating fee share config...');
@@ -95,8 +101,8 @@ router.post('/full', auth.requireAuth, async (req, res) => {
     const initialBuyLamports = Math.floor((initialBuySol || 0.01) * LAMPORTS_PER_SOL);
     
     const launchResult = await sdk.tokenLaunch.createLaunchTransaction({
-      ipfs: tokenInfo.ipfsUrl,
-      tokenMint: tokenInfo.tokenMint,
+      ipfs: ipfs,
+      tokenMint: mint,
       wallet: wallet.toBase58(),
       initialBuyLamports,
     });
@@ -123,10 +129,10 @@ router.post('/full', auth.requireAuth, async (req, res) => {
     res.json({
       success: true,
       message: `🚀 $${symbol.toUpperCase()} launched on Bags.fm!`,
-      tokenMint: tokenInfo.tokenMint,
-      ipfsUrl: tokenInfo.ipfsUrl,
+      tokenMint: mint,
+      ipfsUrl: ipfs,
       bundleId,
-      viewUrl: `https://bags.fm/token/${tokenInfo.tokenMint}`,
+      viewUrl: `https://bags.fm/token/${mint}`,
       initialBuySol: initialBuySol || 0.01,
     });
   } catch (err) {
