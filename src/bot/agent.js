@@ -334,27 +334,28 @@ async function scout(userId, settings, positions) {
     console.log(`[Scout] ${userId}: BUYING ${symbol} (score: ${score}) — ${solToSpend.toFixed(4)} SOL`);
 
     try {
+      // Check balance BEFORE swap
+      const balBefore = await getSolBalance(userId);
       const result = await executeSwap(userId, SOL_MINT, mint, lamports, settings.slippageBps);
+      // Check balance AFTER swap — this is the ACTUAL amount spent
+      const balAfter = await getSolBalance(userId);
+      const actualSpent = Math.max(0, balBefore - balAfter);
       const entryPrice = await getTokenPrice(mint);
 
-      // Record position (accumulate if already holding same token)
+      console.log(`[Scout] ${userId}: Actually spent ${actualSpent.toFixed(6)} SOL (intended ${solToSpend.toFixed(4)})`);
+
+      // Record position with ACTUAL spend
       if (!positions[userId]) positions[userId] = {};
       const existing = positions[userId][mint];
       if (existing) {
-        // Accumulate — average entry price, sum tokens + SOL spent
-        const oldTokens = BigInt(existing.tokensReceived);
-        const newTokens = BigInt(result.outAmount);
-        const totalTokens = oldTokens + newTokens;
-        const totalSol = existing.solSpent + solToSpend;
-        // Weighted average entry price
+        const totalSol = existing.solSpent + actualSpent;
         const avgEntry = existing.entryPrice && entryPrice
-          ? (existing.entryPrice * existing.solSpent + entryPrice * solToSpend) / totalSol
+          ? (existing.entryPrice * existing.solSpent + entryPrice * actualSpent) / totalSol
           : entryPrice || existing.entryPrice;
         positions[userId][mint] = {
           ...existing,
           entryPrice: avgEntry,
           entryPriceSOL: totalSol,
-          tokensReceived: totalTokens.toString(),
           solSpent: totalSol,
           score: Math.max(existing.score, score),
           signature: result.signature
@@ -364,12 +365,12 @@ async function scout(userId, settings, positions) {
           symbol,
           mint,
           entryPrice,
-          entryPriceSOL: solToSpend,
-          tokensReceived: result.outAmount,
-          solSpent: solToSpend,
+          entryPriceSOL: actualSpent,
+          solSpent: actualSpent,
           entryTime: new Date().toISOString(),
           score,
           partialExited: false,
+          highPrice: entryPrice,
           signature: result.signature
         };
       }
@@ -427,30 +428,51 @@ async function monitorPositions(userId, userPositions, settings, allPositions) {
       }
     }
 
+    // Max hold time exit
+    if (settings.maxHoldMinutes) {
+      const holdMin = (Date.now() - new Date(pos.entryTime).getTime()) / 60000;
+      if (holdMin >= settings.maxHoldMinutes && pricePct < 2) {
+        shouldSell = true; reason = `stale position (${Math.round(holdMin)}min, ${pricePct.toFixed(1)}%)`;
+      }
+    }
+
+    // Trailing stop: if was up 3%+ then drops 2% from high
+    if (pos.highPrice && pos.entryPrice) {
+      const fromHigh = ((currentPrice - pos.highPrice) / pos.highPrice) * 100;
+      const fromEntry = ((pos.highPrice - pos.entryPrice) / pos.entryPrice) * 100;
+      if (fromEntry > 3 && fromHigh < -settings.trailingStopPct) {
+        shouldSell = true; reason = `trailing stop (${fromHigh.toFixed(1)}% from high)`;
+      }
+    }
+
+    // Track high watermark
+    if (currentPrice > (pos.highPrice || pos.entryPrice)) {
+      allPositions[userId][mint].highPrice = currentPrice;
+      save(POSITIONS_FILE, allPositions);
+    }
+
     if (shouldSell) {
       console.log(`[Monitor] ${userId}: SELLING ${pos.symbol} — ${reason}`);
       try {
-        const tokensToSell = pos.tokensReceived;
+        // Measure ACTUAL SOL received
+        const balBefore = await getSolBalance(userId);
+        const tokensToSell = pos.tokensReceived || '0';
         const result = await executeSwap(userId, mint, SOL_MINT, Number(tokensToSell), settings.slippageBps);
-        const pnlSol = parseFloat(result.outAmount) / LAMPORTS_PER_SOL - pos.solSpent;
+        const balAfter = await getSolBalance(userId);
+        const actualReceived = Math.max(0, balAfter - balBefore);
+        const pnlSol = actualReceived - pos.solSpent;
 
         delete allPositions[userId][mint];
 
         const holdMs = new Date() - new Date(pos.entryTime);
         const holdDuration = holdMs < 3600000 ? `${Math.round(holdMs/60000)}m` : `${(holdMs/3600000).toFixed(1)}h`;
+        const realPnlPct = pos.solSpent > 0 ? ((actualReceived - pos.solSpent) / pos.solSpent * 100) : 0;
 
-        explainer.queueExplanation({
-          type: 'SELL', symbol: pos.symbol, mint, reason, pnlPct: pricePct,
-          holdDuration, entryPrice: pos.entryPrice, currentPrice: null
-        }, (explanation) => {
-          const trades = load(TRADES_FILE, []);
-          const idx = trades.findLastIndex(t => t.signature === result.signature);
-          if (idx >= 0) { trades[idx].explanation = explanation; save(TRADES_FILE, trades); }
-        });
+        console.log(`[Monitor] ${userId}: Received ${actualReceived.toFixed(6)} SOL (spent ${pos.solSpent.toFixed(6)}) → P&L: ${pnlSol >= 0 ? '+' : ''}${pnlSol.toFixed(4)} SOL (${realPnlPct.toFixed(1)}%)`);
 
-        logTrade(userId, { type: 'SELL', symbol: pos.symbol, mint, reason, pricePct, pnlSol, signature: result.signature, explanation: 'Generating...' });
-        notifier.notifySell({ userId, symbol: pos.symbol, reason, pnlSol, pnlPct: pricePct, signature: result.signature });
-        console.log(`[Agent] ✅ SELL ${pos.symbol} — P&L: ${pnlSol >= 0 ? '+' : ''}${pnlSol.toFixed(4)} SOL`);
+        logTrade(userId, { type: 'SELL', symbol: pos.symbol, mint, reason, pricePct: realPnlPct, pnlSol, solReceived: actualReceived, signature: result.signature });
+        notifier.notifySell({ userId, symbol: pos.symbol, reason, pnlSol, pnlPct: realPnlPct, signature: result.signature });
+        console.log(`[Agent] ✅ SELL ${pos.symbol} — P&L: ${pnlSol >= 0 ? '+' : ''}${pnlSol.toFixed(4)} SOL (${realPnlPct.toFixed(1)}%)`);
       } catch (err) {
         console.error(`[Agent] Sell failed for ${pos.symbol}:`, err.message);
       }
