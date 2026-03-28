@@ -372,6 +372,29 @@
     </div>
   </div>
 
+  <!-- Token Launch -->
+  <div class="panel">
+    <div class="panel-title" onclick="toggleSection('launch-body', this)" style="cursor:pointer; user-select:none;">
+      🚀 Launch Token on Bags.fm <span class="chevron" style="margin-left:auto; font-size:12px; transition: transform .3s;">▶</span>
+    </div>
+    <div id="launch-body" style="display:none;">
+      <p style="font-size:11px; color:var(--muted); margin-bottom:12px;">Launch a new token directly on Bags.fm. The AI narrative scanner suggests trending ideas below.</p>
+      <div id="narrative-suggestions" style="margin-bottom:12px;"></div>
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <input type="text" id="launch-name" placeholder="Token Name (e.g. Doge AI)" style="padding:8px; border-radius:8px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-size:12px;" />
+        <input type="text" id="launch-symbol" placeholder="Symbol (e.g. DOGEAI)" style="padding:8px; border-radius:8px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-size:12px;" />
+        <textarea id="launch-desc" placeholder="Description (optional)" rows="2" style="padding:8px; border-radius:8px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-size:12px; resize:none;"></textarea>
+        <input type="text" id="launch-image" placeholder="Image URL (optional)" style="padding:8px; border-radius:8px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-size:12px;" />
+        <div style="display:flex; gap:8px; align-items:center;">
+          <input type="number" id="launch-buy" placeholder="Initial buy (SOL)" value="0.01" step="0.01" min="0" style="flex:1; padding:8px; border-radius:8px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-size:12px;" />
+          <button onclick="launchToken()" id="launch-btn" style="padding:8px 20px; border-radius:8px; border:none; background:var(--accent); color:white; cursor:pointer; font-size:12px; white-space:nowrap;">🚀 Launch</button>
+        </div>
+      </div>
+      <div id="launch-result" style="display:none; margin-top:10px; padding:10px; border-radius:8px; background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.3); font-size:11px;"></div>
+      <button onclick="loadNarratives()" style="margin-top:8px; padding:4px 12px; border-radius:8px; border:1px solid var(--border); background:none; color:var(--muted); cursor:pointer; font-size:10px;">🔄 Refresh AI ideas</button>
+    </div>
+  </div>
+
   <!-- Export -->
   <div class="panel">
     <div class="panel-title">🔐 Export Private Key</div>
@@ -710,6 +733,66 @@
     setTimeout(() => {
       document.getElementById('status-text').textContent = 'Bot running · updates every 30s';
     }, 5000);
+  }
+
+  // Token Launch
+  async function loadNarratives() {
+    try {
+      const res = await fetch(`${API}/api/narratives`);
+      const data = await res.json();
+      const container = document.getElementById('narrative-suggestions');
+      if (data.narratives?.length) {
+        container.innerHTML = '<div style="font-size:10px; color:var(--muted); margin-bottom:4px;">🧠 AI-suggested trending narratives:</div>' +
+          data.narratives.map(n => 
+            `<button onclick="fillLaunch('${(n.suggestedTickers?.[0] || n.narrative).replace(/'/g, '')}', '${(n.suggestedTickers?.[0] || '').replace(/'/g, '')}')" 
+              style="padding:3px 8px; margin:2px; font-size:10px; border-radius:12px; border:1px solid var(--border); background:none; color:var(--muted); cursor:pointer;">
+              ${n.narrative} (${n.confidence}%) ${n.suggestedTickers?.[0] ? '→ $' + n.suggestedTickers[0] : ''}
+            </button>`
+          ).join('');
+      }
+    } catch {}
+  }
+  function fillLaunch(name, symbol) {
+    document.getElementById('launch-name').value = name;
+    document.getElementById('launch-symbol').value = symbol.toUpperCase();
+  }
+  async function launchToken() {
+    const btn = document.getElementById('launch-btn');
+    const result = document.getElementById('launch-result');
+    btn.disabled = true; btn.textContent = '⏳ Launching...';
+    
+    try {
+      // Step 1: Create token info
+      const createRes = await fetch(`${API}/api/launch/create-token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('autobags_token')}` },
+        body: JSON.stringify({
+          name: document.getElementById('launch-name').value,
+          symbol: document.getElementById('launch-symbol').value,
+          description: document.getElementById('launch-desc').value,
+          imageUrl: document.getElementById('launch-image').value,
+        }),
+      });
+      const createData = await createRes.json();
+      
+      if (!createData.success) {
+        result.style.display = 'block';
+        result.style.background = 'rgba(239,68,68,0.1)';
+        result.style.borderColor = 'rgba(239,68,68,0.3)';
+        result.textContent = '❌ ' + (createData.error || 'Failed to create token');
+        return;
+      }
+
+      result.style.display = 'block';
+      result.style.background = 'rgba(34,197,94,0.1)';
+      result.style.borderColor = 'rgba(34,197,94,0.3)';
+      result.innerHTML = `✅ Token created! <br>Next: Execute launch transaction on Bags.fm<br>${JSON.stringify(createData.tokenInfo || {}, null, 2).slice(0, 200)}`;
+    } catch (e) {
+      result.style.display = 'block';
+      result.textContent = '❌ ' + e.message;
+    } finally {
+      btn.disabled = false; btn.textContent = '🚀 Launch';
+    }
   }
 
   // AI Chat
