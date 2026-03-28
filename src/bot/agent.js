@@ -65,7 +65,7 @@ function getSettings(userId) {
     maxTokenAgeHours: 48,     // max token age in hours (0 = no limit)
     minMarketCapUsd: 10000,   // minimum market cap
     maxMarketCapUsd: 0,       // 0 = no limit
-    cooldownMinutes: 0.33,    // 20s cooldown between trades (matches sim)
+    cooldownMinutes: 5,        // 5min cooldown after a losing trade
     autoCompound: true,       // reinvest profits
     trailingStopPct: 2,       // trailing stop: sell if drops X% from high
     maxHoldMinutes: 15,       // max hold time before stale exit
@@ -245,15 +245,15 @@ async function scout(userId, settings, positions) {
     }
   }
 
-  // Check daily loss limit — wallet balance + open positions vs deposit
+  // Check daily loss limit — ACTUAL wallet balance only (not trusting position tracker)
   if (settings.dailyLossLimitPct > 0) {
     const balance = await getSolBalance(userId, 'confirmed');
-    const openSol = Object.values(positions[userId] || {}).reduce((s, p) => s + (p.solSpent || 0), 0);
-    const totalWorth = balance + openSol; // approximate: assume open positions worth at least cost basis
+    // Don't count open positions at cost basis — that's a lie
+    // Use wallet balance as conservative estimate (tokens could be worth 0)
     const deposited = settings.depositedSol || 1.192;
-    const totalPnlPct = ((totalWorth - deposited) / deposited) * 100;
-    if (totalPnlPct <= -settings.dailyLossLimitPct) {
-      console.log(`[Scout] ${userId}: daily loss limit hit (${totalPnlPct.toFixed(1)}% from deposit)`);
+    const lossPct = ((balance - deposited) / deposited) * 100;
+    if (lossPct <= -settings.dailyLossLimitPct) {
+      console.log(`[Scout] ⛔ ${userId}: DAILY LOSS LIMIT HIT — wallet ${balance.toFixed(4)} SOL = ${lossPct.toFixed(1)}% from ${deposited} deposited (limit: -${settings.dailyLossLimitPct}%)`);
       return;
     }
   }
@@ -322,11 +322,18 @@ async function scout(userId, settings, positions) {
     // Blacklist check
     if (settings.blacklist?.includes(mint)) { continue; }
 
-    // Per-token cooldown: don't rebuy a token within 30 minutes of selling it
+    // Per-token cooldown: don't rebuy a token within 60 minutes of ANY trade on it
     if (!global._tokenCooldowns) global._tokenCooldowns = {};
-    const lastSold = global._tokenCooldowns[mint];
-    if (lastSold && Date.now() - lastSold < 30 * 60 * 1000) {
-      continue; // skip — sold this token recently
+    const lastTraded = global._tokenCooldowns[mint];
+    if (lastTraded && Date.now() - lastTraded < 60 * 60 * 1000) {
+      continue;
+    }
+
+    // Max 3 buys per token EVER — stop the addiction loop
+    if (!global._tokenBuyCounts) global._tokenBuyCounts = {};
+    const buyCount = global._tokenBuyCounts[mint] || 0;
+    if (buyCount >= 3) {
+      continue; // permanently skip — bought this token too many times
     }
 
     // Single DexScreener fetch — filter + score in one pass
@@ -461,6 +468,11 @@ async function scout(userId, settings, positions) {
         save(POSITIONS_FILE, positions);
         logTrade(userId, { type: 'BUY', symbol, mint, solAmount: actualSpent, score, signature: result.signature, entryPrice });
         notifier.notifyBuy({ userId, symbol, score, solAmount: actualSpent, signature: result.signature });
+        // Track buy count + cooldown
+        if (!global._tokenBuyCounts) global._tokenBuyCounts = {};
+        global._tokenBuyCounts[mint] = (global._tokenBuyCounts[mint] || 0) + 1;
+        if (!global._tokenCooldowns) global._tokenCooldowns = {};
+        global._tokenCooldowns[mint] = Date.now();
         break;
       }
       positions[userId][mint] = {
@@ -477,6 +489,11 @@ async function scout(userId, settings, positions) {
 
       logTrade(userId, { type: 'BUY', symbol, mint, solAmount: actualSpent, score, signature: result.signature, entryPrice });
       notifier.notifyBuy({ userId, symbol, score, solAmount: actualSpent, signature: result.signature });
+      // Track buy count + cooldown
+      if (!global._tokenBuyCounts) global._tokenBuyCounts = {};
+      global._tokenBuyCounts[mint] = (global._tokenBuyCounts[mint] || 0) + 1;
+      if (!global._tokenCooldowns) global._tokenCooldowns = {};
+      global._tokenCooldowns[mint] = Date.now();
       priceFeed.subscribe(mint, symbol); // Start real-time monitoring
       console.log(`[Agent] ✅ BUY ${symbol} — sig: ${result.signature?.slice(0, 20)}...`);
       break; // one buy per tick
@@ -637,6 +654,19 @@ async function monitorPositions(userId, userPositions, settings, allPositions) {
 
 function start(intervalMs = 60000) {
   console.log('🤖 AUTOBAGS Agent started — interval:', intervalMs / 1000 + 's');
+  
+  // Load historical buy counts so we don't re-buy tokens we've already traded too many times
+  try {
+    const trades = load(TRADES_FILE, []);
+    global._tokenBuyCounts = {};
+    global._tokenCooldowns = {};
+    trades.filter(t => t.type === 'BUY').forEach(t => {
+      if (t.mint) global._tokenBuyCounts[t.mint] = (global._tokenBuyCounts[t.mint] || 0) + 1;
+    });
+    const overTraded = Object.entries(global._tokenBuyCounts).filter(([,c]) => c >= 3);
+    if (overTraded.length) console.log(`[Agent] ${overTraded.length} tokens permanently skipped (3+ buys):`, overTraded.map(([m]) => m.slice(0,8)).join(', '));
+  } catch {}
+  
   tick().catch(console.error);
   return setInterval(() => tick().catch(console.error), intervalMs);
 }

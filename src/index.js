@@ -78,7 +78,7 @@ app.listen(PORT, () => {
 
   // Start trading agent (10s interval — high frequency)
   const { start } = require('./bot/agent');
-  start(10000);
+  start(30000); // 30s tick — less RPC spam, fewer impulse trades
 
   // Start paper trading simulator ($1000 high-freq)
   const sim = require('./bot/simulator');
