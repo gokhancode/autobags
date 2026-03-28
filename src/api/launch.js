@@ -21,23 +21,21 @@ router.post('/create-token', auth.requireAuth, async (req, res) => {
     const userId = req.user.userId;
     const wallet = WalletManager.getPublicKey(userId);
 
-    // Create FormData for token info
+    // Build multipart form data (Node.js native FormData)
     const formData = new FormData();
     formData.append('name', name);
-    formData.append('symbol', symbol);
+    formData.append('symbol', symbol.toUpperCase());
     formData.append('description', description || `Launched via AUTOBAGS`);
-    formData.append('wallet', wallet);
-
-    // If imageUrl provided, fetch and attach
+    
+    // Image: either URL or file
     if (imageUrl) {
-      try {
-        const imgRes = await fetch(imageUrl);
-        const blob = await imgRes.blob();
-        formData.append('image', blob, 'token.png');
-      } catch {
-        // Image optional — continue without
-      }
+      formData.append('imageUrl', imageUrl);
     }
+    
+    // Optional social links
+    if (req.body.twitter) formData.append('twitter', req.body.twitter);
+    if (req.body.telegram) formData.append('telegram', req.body.telegram);
+    if (req.body.website) formData.append('website', req.body.website);
 
     const result = await bags.createTokenInfo(formData);
 
