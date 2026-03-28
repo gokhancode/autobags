@@ -765,7 +765,7 @@
       // Step 1: Create token info
       const createRes = await fetch(`${API}/api/launch/create-token`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('autobags_token')}` },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
         body: JSON.stringify({
           name: document.getElementById('launch-name').value,
           symbol: document.getElementById('launch-symbol').value,
