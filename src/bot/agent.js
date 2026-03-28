@@ -165,11 +165,13 @@ async function tick() {
       const userPositions = positions[userId] || {};
       const posCount = Object.keys(userPositions).length;
 
-      if (posCount >= settings.maxPositions) {
-        // Monitor existing positions
+      // ALWAYS monitor existing positions first
+      if (posCount > 0) {
         await monitorPositions(userId, userPositions, settings, positions);
-      } else {
-        // Scout for new entry
+      }
+
+      // Then scout for new entries if slots available
+      if (posCount < settings.maxPositions) {
         await scout(userId, settings, positions);
       }
     } catch (err) {
