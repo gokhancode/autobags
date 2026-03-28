@@ -316,3 +316,48 @@ autobags.io
 - **Session-aware sizing** (US/EU full, Asia 75%, off-hours 50%)
 - **Self-tuning** — parameter optimizer runs every 30min
 - **Live at**: [autobags.io](https://autobags.io)
+
+### 12:30 — Edge Expansion (5 New Modules)
+- **Birdeye API** (`birdeye.js`) — token overview, OHLCV candles, trending tokens, unique wallet count, holder data
+- **Whale Tracker** (`whale-tracker.js`) — monitors 5 known smart money wallets via Helius Enhanced API / Solscan fallback
+- **Social Scanner** (`social-scanner.js`) — Twitter presence detection, CoinGecko trending check, DexScreener boost detection
+- **WebSocket Price Feed** (`ws-feed.js`) — 5s price polling for monitored positions (3x faster than agent tick)
+- **Jito Bundles** (`jito.js`) — MEV-protected transactions via Jito block engine for trades ≥ 0.1 SOL
+
+### 12:30 — Scoring Pipeline Upgrade
+- Agent now scores tokens from 6 data sources (was 1):
+  1. DexScreener momentum/volume (base scoring — same as sim)
+  2. Birdeye unique wallets + holder count (up to +15)
+  3. Social presence: Twitter, trending, boosts (up to +10)
+  4. Whale signal: smart money buying (up to +15)
+  5. Session-aware: Asia/EU/US timezone adjustments (+10/-5)
+- CHIBI scored 95 on first scan with new pipeline (was 75 before)
+
+### 12:30 — Timezone-Aware Strategy
+- Asia session (00-08 UTC): favors small cap momentum pumps
+- EU session (07-15 UTC): follows established trends, needs liquidity
+- US session (13-22 UTC): volume plays, buy pressure
+- Off-hours: -5 score penalty (low liquidity risk)
+
+### 12:30 — Cron System Overhaul
+- Fixed nightly memory save (broken since Mar 19 — wrong CLI command)
+- Fixed hourly sim report (same bug)
+- Fixed morning briefing timing (was 1hr late)
+- Added hourly feature cron — auto-improvement agent every 4 hours
+- Removed self-destruct cron that would have killed sim tuner tonight
+- 7 cron jobs total, all verified working
+
+### 12:30 — Critical Bug Fixes
+- **Duplicate-mint check**: Agent won't buy a token it already holds
+- **Position accumulation**: If double-buy somehow happens, costs properly sum
+- **Settings defaults**: Added `trailingStopPct: 2`, `maxHoldMinutes: 15`, `cooldownMinutes: 0.33` (20s)
+- **Daily loss limit**: Raised to 25% (was blocking at -17.7% from deposit)
+
+### Day 2 Afternoon Stats (12:30 UTC)
+- **52 commits** (cumulative)
+- **37 source files** | **7,700+ lines of code** (+889 lines this session)
+- **6 data sources** feeding the scoring pipeline
+- **5 new modules**: birdeye, whale-tracker, social-scanner, ws-feed, jito
+- **7 cron jobs** running (all verified)
+- **Real balance**: 0.981 SOL from 1.192 deposited (-17.7%)
+- **Bot actively trading** with full pipeline
