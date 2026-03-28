@@ -156,10 +156,41 @@
     footer a { color: var(--muted); text-decoration: none; }
     footer a:hover { color: var(--accent2); }
 
-    @media (max-width: 600px) {
-      nav { padding: 16px 20px; }
-      .stats-bar { gap: 24px; }
-      .hero { padding: 80px 20px 60px; }
+    @media (max-width: 768px) {
+      .hide-mobile { display: none !important; }
+      nav { padding: 12px 16px; gap: 8px; flex-wrap: wrap; }
+      .nav-links { gap: 12px; flex-wrap: wrap; justify-content: flex-end; }
+      .nav-links a { font-size: 12px; }
+      .nav-links .btn { padding: 8px 14px; font-size: 12px; }
+      .hero { padding: 60px 16px 48px; }
+      h1 { font-size: 36px; letter-spacing: -1px; }
+      .subtitle { font-size: 15px; margin-bottom: 32px; }
+      .badge { font-size: 11px; padding: 5px 10px; }
+      .cta-group { flex-direction: column; align-items: center; }
+      .btn { width: 100%; max-width: 280px; text-align: center; }
+      .price-bar { gap: 12px; padding: 8px 12px; font-size: 11px; }
+      .price-bar .item { gap: 4px; }
+      .stats-bar { gap: 16px; padding: 24px 16px; }
+      .stat-value { font-size: 22px; }
+      .stat-label { font-size: 10px; }
+      .section { padding: 48px 16px; }
+      .section-title { font-size: 24px; }
+      .section-sub { font-size: 14px; margin-bottom: 32px; }
+      .steps { grid-template-columns: 1fr; gap: 16px; }
+      .step { padding: 20px; }
+      .features { grid-template-columns: 1fr; gap: 16px; padding: 0 16px 48px; }
+      .feature { padding: 24px; }
+      .ticker-item { padding: 0 16px; font-size: 12px; }
+      .modal { margin: 16px; padding: 28px 20px; max-width: calc(100vw - 32px); }
+      footer { padding: 24px 16px; font-size: 12px; }
+    }
+    @media (max-width: 400px) {
+      h1 { font-size: 28px; }
+      .logo { font-size: 16px; }
+      .nav-links { gap: 8px; }
+      .stat-value { font-size: 18px; }
+      .stats-bar { gap: 12px; }
+      .price-bar { flex-direction: column; gap: 6px; }
     }
   </style>
 </head>
@@ -169,8 +200,8 @@
 <nav>
   <a href="/" style="text-decoration:none;"><div class="logo">AUTO<span>BAGS</span></div></a>
   <div class="nav-links">
-    <a href="#how-it-works">How it works</a>
-    <a href="#features">Features</a>
+    <a href="#how-it-works" class="hide-mobile">How it works</a>
+    <a href="#features" class="hide-mobile">Features</a>
     <button class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode" id="theme-btn">🌙</button>
     <a href="#" class="nav-cta" onclick="openModal('login'); return false;">Log in</a>
     <a href="#" class="btn btn-primary" style="padding:10px 20px; font-size:13px;" onclick="openModal('signup'); return false;">Get started</a>

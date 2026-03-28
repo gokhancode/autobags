@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="glow6" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#00ff66; stop-opacity:0.12"/>
+      <stop offset="100%" style="stop-color:#000; stop-opacity:0"/>
+    </radialGradient>
+    <linearGradient id="bag6" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#4ade80"/>
+      <stop offset="100%" style="stop-color:#15803d"/>
+    </linearGradient>
+    <filter id="neon6">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <!-- Black background -->
+  <rect width="512" height="512" rx="112" fill="#050510"/>
+  <rect width="512" height="512" rx="112" fill="url(#glow6)"/>
+  <!-- Shopping bag - neon outline -->
+  <path d="M 158 200 L 146 395 Q 146 425 176 425 L 336 425 Q 366 425 366 395 L 354 200 Z" 
+        fill="#22c55e" opacity="0.06"/>
+  <path d="M 158 200 L 146 395 Q 146 425 176 425 L 336 425 Q 366 425 366 395 L 354 200 Z" 
+        fill="none" stroke="url(#bag6)" stroke-width="4" filter="url(#neon6)"/>
+  <!-- Handle - neon -->
+  <path d="M 208 200 Q 208 130 256 130 Q 304 130 304 200" 
+        fill="none" stroke="#22c55e" stroke-width="6" stroke-linecap="round" filter="url(#neon6)"/>
+  <!-- Circuit board pattern inside bag -->
+  <line x1="200" y1="260" x2="200" y2="380" stroke="#00ff66" stroke-width="1.5" opacity="0.4"/>
+  <line x1="240" y1="240" x2="240" y2="400" stroke="#00ff66" stroke-width="1.5" opacity="0.5"/>
+  <line x1="272" y1="240" x2="272" y2="400" stroke="#00ff66" stroke-width="1.5" opacity="0.5"/>
+  <line x1="312" y1="260" x2="312" y2="380" stroke="#00ff66" stroke-width="1.5" opacity="0.4"/>
+  <!-- Circuit nodes -->
+  <circle cx="200" cy="290" r="4" fill="#00ff66" opacity="0.7"/>
+  <circle cx="240" cy="310" r="5" fill="#00ff66"/>
+  <circle cx="272" cy="330" r="5" fill="#00ff66"/>
+  <circle cx="312" cy="350" r="4" fill="#00ff66" opacity="0.7"/>
+  <circle cx="240" cy="370" r="3" fill="#00ff66" opacity="0.6"/>
+  <circle cx="272" cy="270" r="3" fill="#00ff66" opacity="0.6"/>
+  <!-- Connections -->
+  <line x1="200" y1="290" x2="240" y2="310" stroke="#00ff66" stroke-width="1.5" opacity="0.4"/>
+  <line x1="240" y1="310" x2="272" y2="330" stroke="#00ff66" stroke-width="1.5" opacity="0.4"/>
+  <line x1="272" y1="330" x2="312" y2="350" stroke="#00ff66" stroke-width="1.5" opacity="0.4"/>
+  <!-- Text -->
+  <text x="256" y="485" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-weight="900" font-size="38" fill="#22c55e" letter-spacing="5" filter="url(#neon6)">AUTOBAGS</text>
+</svg>

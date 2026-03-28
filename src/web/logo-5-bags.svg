@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="glow5" cx="50%" cy="55%" r="40%">
+      <stop offset="0%" style="stop-color:#00ff66; stop-opacity:0.2"/>
+      <stop offset="100%" style="stop-color:#000; stop-opacity:0"/>
+    </radialGradient>
+    <linearGradient id="bag5" x1="30%" y1="0%" x2="70%" y2="100%">
+      <stop offset="0%" style="stop-color:#4ade80"/>
+      <stop offset="50%" style="stop-color:#22c55e"/>
+      <stop offset="100%" style="stop-color:#15803d"/>
+    </linearGradient>
+    <radialGradient id="shine5" cx="35%" cy="35%" r="50%">
+      <stop offset="0%" style="stop-color:#86efac; stop-opacity:0.35"/>
+      <stop offset="100%" style="stop-color:#22c55e; stop-opacity:0"/>
+    </radialGradient>
+  </defs>
+  <!-- Black background -->
+  <rect width="512" height="512" rx="112" fill="#0a0a0f"/>
+  <rect width="512" height="512" rx="112" fill="url(#glow5)"/>
+  <!-- Shopping bag body -->
+  <path d="M 152 195 L 140 400 Q 140 430 170 430 L 342 430 Q 372 430 372 400 L 360 195 Z" fill="url(#bag5)"/>
+  <path d="M 152 195 L 140 400 Q 140 430 170 430 L 342 430 Q 372 430 372 400 L 360 195 Z" fill="url(#shine5)"/>
+  <!-- Bag handle -->
+  <path d="M 205 195 Q 205 120 256 120 Q 307 120 307 195" fill="none" stroke="#15803d" stroke-width="18" stroke-linecap="round"/>
+  <path d="M 205 195 Q 205 128 256 128 Q 307 128 307 195" fill="none" stroke="#4ade80" stroke-width="10" stroke-linecap="round"/>
+  <!-- Robot eye in center of bag -->
+  <circle cx="256" cy="310" r="45" fill="#0a0a0f" opacity="0.6"/>
+  <circle cx="256" cy="310" r="35" fill="none" stroke="#00ff66" stroke-width="3"/>
+  <circle cx="256" cy="310" r="18" fill="#00ff66" opacity="0.9"/>
+  <circle cx="256" cy="310" r="7" fill="#0a0a0f"/>
+  <!-- Scan lines -->
+  <line x1="211" y1="310" x2="165" y2="310" stroke="#00ff66" stroke-width="2" opacity="0.4" stroke-dasharray="6,4"/>
+  <line x1="301" y1="310" x2="347" y2="310" stroke="#00ff66" stroke-width="2" opacity="0.4" stroke-dasharray="6,4"/>
+  <!-- Text -->
+  <text x="256" y="490" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-weight="900" font-size="42" fill="#22c55e" letter-spacing="5">AUTOBAGS</text>
+</svg>
