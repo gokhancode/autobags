@@ -349,6 +349,29 @@
     </div><!-- /trades-body-wrap -->
   </div>
 
+  <!-- AI Strategy Chat -->
+  <div class="panel">
+    <div class="panel-title" onclick="toggleSection('chat-body', this)" style="cursor:pointer; user-select:none;">
+      🤖 AI Strategy Chat <span class="chevron" style="margin-left:auto; font-size:12px; transition: transform .3s; transform: rotate(90deg);">▶</span>
+    </div>
+    <div id="chat-body">
+      <div id="chat-messages" style="max-height:300px; overflow-y:auto; margin-bottom:8px; padding:8px; background:var(--card-bg); border-radius:8px; font-size:12px;">
+        <div style="color:var(--muted); padding:8px;">Ask me about your trading strategy, analyze tokens, or get recommendations...</div>
+      </div>
+      <div style="display:flex; gap:6px;">
+        <input type="text" id="chat-input" placeholder="e.g. Why am I losing? / Analyze CHIBI / Should I tighten my stop loss?" 
+               style="flex:1; padding:8px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-size:12px;"
+               onkeypress="if(event.key==='Enter')sendChat()" />
+        <button onclick="sendChat()" style="padding:8px 16px; border-radius:8px; border:none; background:var(--accent); color:white; cursor:pointer; font-size:12px;">Send</button>
+      </div>
+      <div style="display:flex; gap:4px; margin-top:6px; flex-wrap:wrap;">
+        <button onclick="quickChat('Why am I losing money?')" style="padding:3px 8px; font-size:10px; border-radius:12px; border:1px solid var(--border); background:none; color:var(--muted); cursor:pointer;">Why am I losing?</button>
+        <button onclick="quickChat('What strategy changes should I make?')" style="padding:3px 8px; font-size:10px; border-radius:12px; border:1px solid var(--border); background:none; color:var(--muted); cursor:pointer;">Strategy tips</button>
+        <button onclick="quickChat('Analyze the current market conditions')" style="padding:3px 8px; font-size:10px; border-radius:12px; border:1px solid var(--border); background:none; color:var(--muted); cursor:pointer;">Market analysis</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Export -->
   <div class="panel">
     <div class="panel-title">🔐 Export Private Key</div>
@@ -688,6 +711,40 @@
       document.getElementById('status-text').textContent = 'Bot running · updates every 30s';
     }, 5000);
   }
+
+  // AI Chat
+  async function sendChat(msg) {
+    const input = document.getElementById('chat-input');
+    const message = msg || input.value.trim();
+    if (!message) return;
+    input.value = '';
+    
+    const container = document.getElementById('chat-messages');
+    container.innerHTML += `<div style="margin:6px 0; padding:6px 10px; background:var(--accent); color:white; border-radius:12px 12px 4px 12px; max-width:80%; margin-left:auto; text-align:right;">${message}</div>`;
+    container.innerHTML += `<div id="chat-loading" style="margin:6px 0; color:var(--muted);">🤖 Thinking...</div>`;
+    container.scrollTop = container.scrollHeight;
+    
+    try {
+      const res = await fetch(`${API}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, message }),
+      });
+      const data = await res.json();
+      document.getElementById('chat-loading')?.remove();
+      
+      if (data.reply) {
+        container.innerHTML += `<div style="margin:6px 0; padding:6px 10px; background:var(--card-bg); border:1px solid var(--border); border-radius:12px 12px 12px 4px; max-width:85%; font-size:11px; line-height:1.5;">${data.reply.replace(/\n/g, '<br>')}</div>`;
+      } else {
+        container.innerHTML += `<div style="margin:6px 0; color:var(--muted);">❌ ${data.error || 'Failed'}</div>`;
+      }
+    } catch (e) {
+      document.getElementById('chat-loading')?.remove();
+      container.innerHTML += `<div style="margin:6px 0; color:var(--muted);">❌ Connection error</div>`;
+    }
+    container.scrollTop = container.scrollHeight;
+  }
+  function quickChat(msg) { sendChat(msg); }
 
   loadAll();
   setInterval(() => refreshWithAnimation(), 30000);

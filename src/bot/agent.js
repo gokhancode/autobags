@@ -21,6 +21,8 @@ const whaleTracker = require('./whale-tracker');
 const social       = require('./social-scanner');
 const priceFeed    = require('./ws-feed');
 const jito         = require('./jito');
+const rugDetector  = require('./rug-detector');
+const dynParams    = require('./dynamic-params');
 
 const BAGS_KEY     = process.env.BAGS_API_KEY;
 const PARTNER_KEY  = process.env.BAGS_PARTNER_KEY;
@@ -404,6 +406,15 @@ async function scout(userId, settings, positions) {
       console.log(`[Scout] Skip ${symbol}: already holding this token`);
       continue;
     }
+
+    // Rug detection check — skip if too risky
+    try {
+      const risk = await rugDetector.assessRisk(mint);
+      if (!risk.safe) {
+        console.log(`[Scout] Skip ${symbol}: rug risk ${risk.riskScore}/100 — ${risk.flags[0]}`);
+        continue;
+      }
+    } catch {}
 
     console.log(`[Scout] ✅ ${symbol} passed! Score: ${score} — proceeding to buy`);
 
