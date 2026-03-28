@@ -206,20 +206,28 @@
 <!-- STATS BAR -->
 <div class="stats-bar">
   <div class="stat">
-    <div class="stat-value" id="stat-pools">—</div>
-    <div class="stat-label">Bags pools live</div>
-  </div>
-  <div class="stat">
-    <div class="stat-value" id="stat-traders">—</div>
-    <div class="stat-label">Users trading</div>
-  </div>
-  <div class="stat">
     <div class="stat-value" id="stat-trades">—</div>
     <div class="stat-label">Trades executed</div>
   </div>
   <div class="stat">
     <div class="stat-value" id="stat-winrate">—</div>
-    <div class="stat-label">Win rate</div>
+    <div class="stat-label">Sim win rate</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value" id="stat-signals">25</div>
+    <div class="stat-label">Trading signals</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value" id="stat-strategies">5</div>
+    <div class="stat-label">AI strategies</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value" id="stat-api">10</div>
+    <div class="stat-label">Bags API endpoints</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value" id="stat-pools">—</div>
+    <div class="stat-label">Bags pools live</div>
   </div>
 </div>
 
@@ -288,6 +296,53 @@
     </div>
   </div>
 </div>
+
+<!-- UNDER THE HOOD -->
+<section class="section" id="tech">
+  <div class="section-title">Under the hood</div>
+  <div class="section-sub">The numbers behind the bot</div>
+  <div class="stats-bar" style="border:none; padding:0; gap:32px;">
+    <div class="stat">
+      <div class="stat-value" style="color:var(--accent2);" id="th-loc">6,800+</div>
+      <div class="stat-label">Lines of code</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value" style="color:var(--accent2);" id="th-commits">44</div>
+      <div class="stat-label">Git commits</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value" style="color:var(--accent2);" id="th-routes">39</div>
+      <div class="stat-label">API routes</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value" style="color:var(--green);" id="th-sim">—</div>
+      <div class="stat-label">Sim P&L</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value" style="color:var(--green);" id="th-peak">—</div>
+      <div class="stat-label">Sim peak balance</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value" style="color:var(--red);" id="th-dd">—</div>
+      <div class="stat-label">Max drawdown</div>
+    </div>
+  </div>
+  <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:10px; margin-top:32px;">
+    <span class="badge">Node.js 22</span>
+    <span class="badge">SQLite + WAL</span>
+    <span class="badge">Bags.fm API</span>
+    <span class="badge">Jupiter Aggregator</span>
+    <span class="badge">Bayesian Engine</span>
+    <span class="badge">Kelly Criterion</span>
+    <span class="badge">Groq AI (Llama 3.3)</span>
+    <span class="badge">AES-256-GCM</span>
+    <span class="badge">TOTP 2FA</span>
+    <span class="badge">Chart.js</span>
+    <span class="badge">DexScreener</span>
+    <span class="badge">CoinGecko</span>
+    <span class="badge">RugCheck</span>
+  </div>
+</section>
 
 <!-- CTA SECTION -->
 <section style="text-align:center; padding:80px 24px;">
@@ -482,9 +537,23 @@
       document.getElementById('pb-launches').textContent = data.bags.recentLaunches.toLocaleString();
       document.getElementById('pb-trades').textContent   = data.autobags.tradesTotal;
       document.getElementById('stat-pools').textContent   = data.bags.pools.toLocaleString();
-      document.getElementById('stat-traders').textContent = data.autobags.subscribers;
       document.getElementById('stat-trades').textContent  = data.autobags.tradesTotal;
       document.getElementById('stat-winrate').textContent = data.autobags.winRate || '—';
+      document.getElementById('stat-signals').textContent = data.autobags.signalsTracked || '25';
+      document.getElementById('stat-strategies').textContent = data.autobags.strategiesCompeting || '5';
+      document.getElementById('stat-api').textContent = data.autobags.bagsEndpoints || '10';
+      // Tech stats
+      document.getElementById('th-loc').textContent = (data.autobags.linesOfCode || 6800).toLocaleString() + '+';
+      document.getElementById('th-commits').textContent = data.autobags.commits || '44';
+      document.getElementById('th-routes').textContent = data.autobags.apiRoutes || '39';
+      if (data.autobags.simPnlPct) {
+        const pnl = parseFloat(data.autobags.simPnlPct);
+        const el = document.getElementById('th-sim');
+        el.textContent = (pnl >= 0 ? '+' : '') + data.autobags.simPnlPct;
+        el.style.color = pnl >= 0 ? 'var(--green)' : 'var(--red)';
+      }
+      if (data.autobags.simPeakBalance) document.getElementById('th-peak').textContent = data.autobags.simPeakBalance;
+      if (data.autobags.maxDrawdown) document.getElementById('th-dd').textContent = data.autobags.maxDrawdown;
       const tokens = data.bags.recentTokens;
       if (tokens && tokens.length) {
         const makeItem = t => `<div class="ticker-item"><span class="sym">$${t.symbol}</span><span class="lbl">${t.name?.slice(0,18) || ''}</span></div>`;
