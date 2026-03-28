@@ -122,12 +122,27 @@ async function executeSwap(userId, inputMint, outputMint, lamports, slippageBps 
   // 5. Re-serialize to base58
   const signedB58 = bs58.encode(vtx.serialize());
 
-  // 6. Submit via Bags
-  const result = await bags.sendTransaction(signedB58);
-  if (!result?.success) throw new Error('Send failed: ' + JSON.stringify(result));
+  // 6. Submit — use Jito for trades >= 0.1 SOL for MEV protection, else normal
+  let result;
+  const solAmount = lamports / LAMPORTS_PER_SOL;
+  if (solAmount >= 0.1) {
+    try {
+      console.log(`[Swap] Using Jito MEV protection (${solAmount.toFixed(3)} SOL)`);
+      result = await jito.sendWithJito(signedB58);
+    } catch (jitoErr) {
+      console.log(`[Swap] Jito failed (${jitoErr.message}), falling back to Bags`);
+      result = await bags.sendTransaction(signedB58);
+      if (!result?.success) throw new Error('Send failed: ' + JSON.stringify(result));
+      result = { signature: result.response };
+    }
+  } else {
+    result = await bags.sendTransaction(signedB58);
+    if (!result?.success) throw new Error('Send failed: ' + JSON.stringify(result));
+    result = { signature: result.response };
+  }
 
   return {
-    signature:  result.response,
+    signature:  result.signature || result.response,
     inAmount:   quote.response.inAmount,
     outAmount:  quote.response.outAmount,
     inputMint,
@@ -474,16 +489,31 @@ async function monitorPositions(userId, userPositions, settings, allPositions) {
     if (!currentPrice || !pos.entryPrice) continue;
 
     const pricePct = ((currentPrice - pos.entryPrice) / pos.entryPrice) * 100;
+
+    // Dynamic SL/TP — adapts to volatility, session, regime, and streak
+    let dynSL = settings.stopLossPct;
+    let dynTP = settings.takeProfitPct;
+    let dynTrailing = settings.trailingStopPct || 2;
+    try {
+      const dp = await dynParams.getDynamicParams(mint, pos.symbol, settings);
+      dynSL = dp.stopLoss;
+      dynTP = dp.takeProfit;
+      dynTrailing = dp.trailingStop || dynTrailing;
+      if (dp.stopLoss !== settings.stopLossPct || dp.takeProfit !== settings.takeProfitPct) {
+        console.log(`[Monitor] ${pos.symbol}: dynamic params SL=${dynSL.toFixed(1)}% TP=${dynTP.toFixed(1)}% (base: SL=${settings.stopLossPct}% TP=${settings.takeProfitPct}%)`);
+      }
+    } catch {}
+
     console.log(`[Monitor] ${userId} ${pos.symbol}: ${pricePct >= 0 ? '+' : ''}${pricePct.toFixed(2)}%`);
 
     let shouldSell = false;
     let reason = '';
 
-    // Stop loss
-    if (pricePct <= -settings.stopLossPct) { shouldSell = true; reason = `stop loss (${pricePct.toFixed(1)}%)`; }
+    // Stop loss (dynamic)
+    if (pricePct <= -dynSL) { shouldSell = true; reason = `stop loss (${pricePct.toFixed(1)}%, limit -${dynSL.toFixed(1)}%)`; }
 
-    // Take profit
-    if (pricePct >= settings.takeProfitPct) { shouldSell = true; reason = `take profit (+${pricePct.toFixed(1)}%)`; }
+    // Take profit (dynamic)
+    if (pricePct >= dynTP) { shouldSell = true; reason = `take profit (+${pricePct.toFixed(1)}%, target +${dynTP.toFixed(1)}%)`; }
 
     // Partial exit (50% at partialExitPct threshold) — matches sim
     if (!pos.partialExited && pricePct >= settings.partialExitPct && !shouldSell) {
@@ -528,7 +558,7 @@ async function monitorPositions(userId, userPositions, settings, allPositions) {
     if (pos.highPrice && pos.entryPrice) {
       const fromHigh = ((currentPrice - pos.highPrice) / pos.highPrice) * 100;
       const fromEntry = ((pos.highPrice - pos.entryPrice) / pos.entryPrice) * 100;
-      if (fromEntry > 3 && fromHigh < -settings.trailingStopPct) {
+      if (fromEntry > 3 && fromHigh < -dynTrailing) {
         shouldSell = true; reason = `trailing stop (${fromHigh.toFixed(1)}% from high)`;
       }
     }

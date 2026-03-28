@@ -138,9 +138,9 @@ async function fetchStats() {
       simPnlPct:    simPnlPct ? simPnlPct + '%' : null,
       simPeakBalance: sim.peakBalance ? '$' + sim.peakBalance.toFixed(0) : null,
       maxDrawdown:  sim.maxDrawdown ? sim.maxDrawdown.toFixed(1) + '%' : null,
-      linesOfCode:  6800,
-      apiRoutes:    39,
-      commits:      44
+      linesOfCode:  9995,
+      apiRoutes:    84,
+      commits:      71
     },
     trending: topBoosted,
     updatedAt: new Date().toISOString()

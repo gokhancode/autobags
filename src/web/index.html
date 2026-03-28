@@ -249,7 +249,7 @@
     <div class="step">
       <div class="step-num">03 /</div>
       <h3>AI scouts tokens</h3>
-      <p>Our agent scans trending tokens every 60 seconds — filtering by safety score, liquidity, volume, and momentum.</p>
+      <p>Our agent scans trending tokens every 10 seconds — filtering by safety score, liquidity, volume, and momentum.</p>
     </div>
     <div class="step">
       <div class="step-num">04 /</div>
@@ -266,33 +266,48 @@
   <div class="features">
     <div class="feature">
       <div class="icon">🧠</div>
-      <h3>Intel scoring</h3>
-      <p>6-signal scoring engine: RugCheck safety, liquidity depth, volume ratios, holder distribution, social presence, and momentum — every token is scored 0-100 before entry.</p>
+      <h3>6-Source Intel Scoring</h3>
+      <p>DexScreener momentum + Birdeye wallets + social presence + whale tracking + holder growth + rug detection — every token scores 0-100 before entry.</p>
     </div>
     <div class="feature">
-      <div class="icon">🔒</div>
-      <h3>Your keys, always</h3>
-      <p>AES-256-GCM encrypted wallets. Export your private key anytime with 2FA verification. Take full self-custody whenever you want.</p>
+      <div class="icon">🛡️</div>
+      <h3>Rug Detection</h3>
+      <p>On-chain mint/freeze authority checks, holder concentration analysis, and DexScreener red flags. Risky tokens are auto-skipped before your SOL touches them.</p>
+    </div>
+    <div class="feature">
+      <div class="icon">🐋</div>
+      <h3>Whale Tracker</h3>
+      <p>Monitors smart money wallets (Wintermute, top traders) in real-time. If whales are buying, you'll know — and the bot scores it higher.</p>
     </div>
     <div class="feature">
       <div class="icon">⚡</div>
-      <h3>Smart exits</h3>
-      <p>Partial profit taking, momentum exits, whale dump detection, and configurable stop-loss / take-profit. No bag-holding.</p>
+      <h3>Smart Exits</h3>
+      <p>Trailing stops, partial profit taking, dynamic SL/TP based on volatility regime, max hold time, and momentum exits. No bag-holding.</p>
+    </div>
+    <div class="feature">
+      <div class="icon">🚀</div>
+      <h3>Launch Tokens</h3>
+      <p>Launch your own token directly on Bags.fm — metadata, fee sharing, and Jito-protected transactions. One click from the dashboard.</p>
+    </div>
+    <div class="feature">
+      <div class="icon">💬</div>
+      <h3>AI Strategy Chat</h3>
+      <p>Ask the AI why you're losing, get market analysis, or analyze any token — powered by Llama 3.3 70B with full context of your trades.</p>
+    </div>
+    <div class="feature">
+      <div class="icon">📈</div>
+      <h3>Backtesting Engine</h3>
+      <p>Replay historical trades with different parameters. Grid search optimizer finds the best SL/TP/score combos from your real data.</p>
+    </div>
+    <div class="feature">
+      <div class="icon">🔒</div>
+      <h3>Your Keys, Always</h3>
+      <p>AES-256-GCM encrypted wallets. Export your private key anytime with 2FA verification. Full self-custody whenever you want.</p>
     </div>
     <div class="feature">
       <div class="icon">💰</div>
-      <h3>No subscription</h3>
-      <p>Only pay when the bot trades — 1.5% per swap via Bags.fm fee sharing. Zero monthly fees. Zero setup costs.</p>
-    </div>
-    <div class="feature">
-      <div class="icon">🎛️</div>
-      <h3>Your rules</h3>
-      <p>Basic mode with risk presets (Low/Medium/High) or Advanced mode with full control over every parameter.</p>
-    </div>
-    <div class="feature">
-      <div class="icon">📊</div>
-      <h3>Live dashboard</h3>
-      <p>Real-time portfolio tracking, trade history, P&L, and bot status — all on one clean dashboard.</p>
+      <h3>No Subscription</h3>
+      <p>Only pay when the bot trades — via Bags.fm fee sharing. Zero monthly fees. Zero setup costs. Aligned incentives.</p>
     </div>
   </div>
 </div>
@@ -330,17 +345,22 @@
   <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:10px; margin-top:32px;">
     <span class="badge">Node.js 22</span>
     <span class="badge">SQLite + WAL</span>
-    <span class="badge">Bags.fm API</span>
+    <span class="badge">Bags.fm SDK v2</span>
     <span class="badge">Jupiter Aggregator</span>
+    <span class="badge">Jito MEV Protection</span>
+    <span class="badge">Birdeye API</span>
+    <span class="badge">DexScreener</span>
+    <span class="badge">Helius DAS</span>
+    <span class="badge">Groq AI (Llama 3.3 70B)</span>
+    <span class="badge">Pattern Recognition ML</span>
     <span class="badge">Bayesian Engine</span>
     <span class="badge">Kelly Criterion</span>
-    <span class="badge">Groq AI (Llama 3.3)</span>
+    <span class="badge">Dynamic SL/TP</span>
     <span class="badge">AES-256-GCM</span>
     <span class="badge">TOTP 2FA</span>
     <span class="badge">Chart.js</span>
-    <span class="badge">DexScreener</span>
     <span class="badge">CoinGecko</span>
-    <span class="badge">RugCheck</span>
+    <span class="badge">Whale Tracking</span>
   </div>
 </section>
 

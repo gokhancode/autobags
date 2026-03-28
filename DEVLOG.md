@@ -361,3 +361,51 @@ autobags.io
 - **7 cron jobs** running (all verified)
 - **Real balance**: 0.981 SOL from 1.192 deposited (-17.7%)
 - **Bot actively trading** with full pipeline
+
+---
+
+## Day 3 — March 28, 2026
+
+### 12:30 — Edge Expansion Blitz (10 modules in 2 hours)
+
+Built and deployed all remaining features from the roadmap:
+
+**Trading Intelligence:**
+- **Pattern Recognition ML** (`src/bot/pattern-recognition.js`) — Logistic regression on 14 trade features (momentum, vol, buy ratio, mcap, holder growth). SGD training, auto-trains after 10 labeled trades. Integrated into scoring pipeline.
+- **Backtesting Engine** (`src/bot/backtester.js`) — Replay historical trades with parameter overrides. Grid search optimizer across SL/TP/minScore params finds optimal combos.
+- **Holder Growth Tracking** (`src/bot/holder-tracker.js`) — Birdeye + on-chain holder counts, growth rate scoring (+10 for 5%+ growth, -5 for shrinking).
+- **Jupiter Price API** (`src/bot/jupiter.js`) — Aggregated pricing via jup.ag for more accurate token prices.
+
+**Trading Modes:**
+- **Grid Trading** (`src/bot/grid-trader.js`) — Buy/sell at fixed price intervals for range-bound tokens.
+- **DCA Mode** (`src/bot/dca.js`) — Dollar cost average into positions over configurable intervals/chunks.
+- **Portfolio Rebalancer** (`src/bot/portfolio-rebalancer.js`) — Target allocations with drift-based rebalancing.
+
+**Platform Features:**
+- **Leaderboard & Strategy Sharing** (`src/api/leaderboard.js`) — Public rankings, share/import strategies, referral program, developer API docs.
+- **Token Launch (Bags SDK v2)** (`src/api/launch.js`) — Full 4-step launch: metadata upload → fee share config → launch tx → Jito bundle. One-click from dashboard. Auto-appends "Launched using autobags.io 🤖" branding.
+- **AI Chat Markdown** — Fixed rendering (bold, italic, lists) in dashboard chat panel.
+
+### 12:45 — Wiring & Integration
+- Agent tick reduced from 15s → 10s (higher frequency)
+- Pattern recognition + holder scoring integrated into `agent.js` scoring pipeline
+- Jito MEV protection wired into `executeSwap()` for trades ≥ 0.1 SOL (fallback to Bags API)
+- Dynamic SL/TP wired into position monitor — adapts to volatility regime, token volatility, session, and streak
+- API rate limit fix: only enrich candidates scoring ≥ 55 (was hitting 150+ tokens × 5 APIs = 750+ calls per tick)
+- Extra candidate sources (Birdeye trending, whale candidates, social trending) throttled to every 5th tick
+
+### 13:00 — Landing Page & Stats Polish
+- Updated "Under the hood" stats: 9,995 LOC, 84 API routes, 71 commits
+- Added 9 feature cards (was 6): rug detection, whale tracker, token launch, AI chat, backtesting
+- Added tech badges: Jito MEV, Birdeye, Helius DAS, Pattern Recognition ML, Dynamic SL/TP
+- Updated scanner description to 10s interval
+
+### Day 3 Stats (13:15 UTC)
+- **71 commits** (cumulative)
+- **54 source files** | **~10,000 lines of code**
+- **84 API routes** across 19+ route groups
+- **8 data sources** in scoring pipeline
+- **10/10 Bags API endpoints** integrated (trade + launch)
+- **All 25 planned features built** (5 remaining need external deps)
+- **Key positions**: MEG (+3.69%), Ryotaro (stop-lossed at -5.5%)
+- **Full Bags.fm integration**: trade, launch, fee sharing, pool analytics
