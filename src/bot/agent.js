@@ -16,6 +16,11 @@ const explainer    = require('./trade-explainer');
 const notifier     = require('./notifier');
 const dataSources  = require('./data-sources');
 const equity       = require('./equity-tracker');
+const birdeye      = require('./birdeye');
+const whaleTracker = require('./whale-tracker');
+const social       = require('./social-scanner');
+const priceFeed    = require('./ws-feed');
+const jito         = require('./jito');
 
 const BAGS_KEY     = process.env.BAGS_API_KEY;
 const PARTNER_KEY  = process.env.BAGS_PARTNER_KEY;
@@ -55,8 +60,10 @@ function getSettings(userId) {
     maxTokenAgeHours: 48,     // max token age in hours (0 = no limit)
     minMarketCapUsd: 10000,   // minimum market cap
     maxMarketCapUsd: 0,       // 0 = no limit
-    cooldownMinutes: 0,       // wait X min after a loss before next trade
+    cooldownMinutes: 0.33,    // 20s cooldown between trades (matches sim)
     autoCompound: true,       // reinvest profits
+    trailingStopPct: 2,       // trailing stop: sell if drops X% from high
+    maxHoldMinutes: 15,       // max hold time before stale exit
     blacklist: []
   };
   const presets = {
@@ -265,7 +272,25 @@ async function scout(userId, settings, positions) {
     }));
   } catch {}
 
-  const allCandidates = [...boosted, ...tokens, ...trending].filter(t => t.tokenMint || t.mint || t.address);
+  // Add Birdeye trending tokens
+  let birdeyeTrending = [];
+  try {
+    birdeyeTrending = await birdeye.getTrending();
+  } catch {}
+
+  // Add whale-bought tokens
+  let whaleCandidates = [];
+  try {
+    whaleCandidates = await whaleTracker.getWhaleCandidates();
+  } catch {}
+
+  // Add socially trending tokens
+  let socialTrending = [];
+  try {
+    socialTrending = await social.getSocialTrending();
+  } catch {}
+
+  const allCandidates = [...boosted, ...birdeyeTrending, ...whaleCandidates, ...socialTrending, ...tokens, ...trending].filter(t => t.tokenMint || t.mint || t.address);
 
   // Deduplicate
   const seen = new Set();
@@ -336,6 +361,36 @@ async function scout(userId, settings, positions) {
       if (m5 > 20) score -= 10;
       if (h1 < -10) score -= 10;
       if (buyRatio < 0.4) score -= 15;
+
+      // Session-aware scoring adjustment (different timezone = different edge)
+      const hour = new Date().getUTCHours();
+      const session = hour >= 0 && hour < 8 ? 'asia' : hour >= 7 && hour < 15 ? 'europe' : hour >= 13 && hour < 22 ? 'us' : 'off';
+      if (session === 'asia' && mcapVal < 500000 && m5 > 8) score += 10; // Asia loves small cap pumps
+      if (session === 'europe' && h1 > 5 && liq > 20000) score += 10; // EU follows established trends
+      if (session === 'us' && vol24 > 50000 && buys1h > sells1h * 1.5) score += 10; // US volume play
+      if (session === 'off') score -= 5; // Off-hours penalty
+
+      // Bonus: Birdeye data (unique wallets, holder count)
+      try {
+        const be = await birdeye.scoreBirdeye(mint);
+        if (be.score > 0) score += Math.min(15, be.score);
+      } catch {}
+
+      // Bonus: Social presence (Twitter, CoinGecko trending, DexScreener boost)
+      try {
+        const soc = await social.scoreSocial(symbol, mint);
+        if (soc.score > 0) score += Math.min(10, soc.score);
+      } catch {}
+
+      // Bonus: Whale signal
+      try {
+        const ws = await whaleTracker.getWhaleSignal(mint);
+        if (ws.score > 0) {
+          score += Math.min(15, ws.score);
+          console.log(`[Scout] 🐋 ${symbol}: whale signal +${ws.score} (${ws.whales.join(', ')})`);
+        }
+      } catch {}
+
       score = Math.max(0, Math.min(100, score));
     } catch { continue; }
 
@@ -401,6 +456,7 @@ async function scout(userId, settings, positions) {
 
       logTrade(userId, { type: 'BUY', symbol, mint, solAmount: actualSpent, score, signature: result.signature, entryPrice });
       notifier.notifyBuy({ userId, symbol, score, solAmount: actualSpent, signature: result.signature });
+      priceFeed.subscribe(mint, symbol); // Start real-time monitoring
       console.log(`[Agent] ✅ BUY ${symbol} — sig: ${result.signature?.slice(0, 20)}...`);
       break; // one buy per tick
     } catch (err) {
@@ -413,7 +469,9 @@ async function scout(userId, settings, positions) {
 
 async function monitorPositions(userId, userPositions, settings, allPositions) {
   for (const [mint, pos] of Object.entries(userPositions)) {
-    const currentPrice = await getTokenPrice(mint);
+    // Use WebSocket feed price if available (5s updates), fallback to DexScreener
+    let currentPrice = priceFeed.getPrice(mint);
+    if (!currentPrice) currentPrice = await getTokenPrice(mint);
     if (!currentPrice || !pos.entryPrice) continue;
 
     const pricePct = ((currentPrice - pos.entryPrice) / pos.entryPrice) * 100;
@@ -507,6 +565,7 @@ async function monitorPositions(userId, userPositions, settings, allPositions) {
         const pnlSol = actualReceived - pos.solSpent;
 
         delete allPositions[userId][mint];
+        priceFeed.unsubscribe(mint); // Stop real-time monitoring
 
         const holdMs = new Date() - new Date(pos.entryTime);
         const holdDuration = holdMs < 3600000 ? `${Math.round(holdMs/60000)}m` : `${(holdMs/3600000).toFixed(1)}h`;
