@@ -734,7 +734,14 @@
       document.getElementById('chat-loading')?.remove();
       
       if (data.reply) {
-        container.innerHTML += `<div style="margin:6px 0; padding:6px 10px; background:var(--card-bg); border:1px solid var(--border); border-radius:12px 12px 12px 4px; max-width:85%; font-size:11px; line-height:1.5;">${data.reply.replace(/\n/g, '<br>')}</div>`;
+        // Render markdown: bold, italic, lists, line breaks
+        let html = data.reply
+          .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+          .replace(/\*(.+?)\*/g, '<em>$1</em>')
+          .replace(/^\d+\.\s/gm, '<br>• ')
+          .replace(/^[\-\*]\s/gm, '• ')
+          .replace(/\n/g, '<br>');
+        container.innerHTML += `<div style="margin:6px 0; padding:8px 12px; background:var(--card-bg); border:1px solid var(--border); border-radius:12px 12px 12px 4px; max-width:85%; font-size:11px; line-height:1.6;">${html}</div>`;
       } else {
         container.innerHTML += `<div style="margin:6px 0; color:var(--muted);">❌ ${data.error || 'Failed'}</div>`;
       }
