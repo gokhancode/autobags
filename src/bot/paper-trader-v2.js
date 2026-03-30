@@ -262,13 +262,18 @@ async function tick() {
   
   // ── Max positions ─────────────────────────────────────────────────────
   const openCount = Object.keys(state.positions).length;
-  if (openCount >= 5) { // HFT: up to 5 concurrent positions
+  if (openCount >= 10) { // 1/min mode: up to 10 concurrent
     save(STATE_FILE, state); save(TRADES_FILE, trades);
     return;
   }
   
   // ── Post-loss cooldown ────────────────────────────────────────────────
-  // HFT: no cooldown — keep firing
+  // 1 trade per minute rate limiter
+  const lastBuyTime = state._lastBuyTime || 0;
+  if (Date.now() - lastBuyTime < 55000) { // ~1 min between buys
+    save(STATE_FILE, state); save(TRADES_FILE, trades);
+    return;
+  }
   
   // ── Scout candidates ──────────────────────────────────────────────────
   let candidates = [];
@@ -311,7 +316,7 @@ async function tick() {
     if (state.positions[mint]) continue;
     
     // One shot per token per 10min (HFT: allow re-entry after cooldown)
-    if (state.tradedToday[mint] && Date.now() - state.tradedToday[mint] < 10 * 60 * 1000) continue;
+    if (state.tradedToday[mint] && Date.now() - state.tradedToday[mint] < 30 * 60 * 1000) continue; // 30min cooldown per token
     
     // Get price data (includes full pair info)
     const priceData = await getPrice(mint);
@@ -319,7 +324,7 @@ async function tick() {
     
     const { score, reasons } = scoreCandidate(priceData.pair);
     
-    if (score > bestScore && score >= 65) {
+    if (score > bestScore && score >= 55) {
       bestScore = score;
       bestCandidate = { mint, score, reasons, priceData };
     }
@@ -339,7 +344,7 @@ async function tick() {
     lockPair(mint, pair.pairAddress);
     
     // Position sizing: 15% of balance (smaller per trade, more trades)
-    const solToSpend = Math.min(state.balanceSol * 0.15, state.balanceSol - 0.5);
+    const solToSpend = Math.min(state.balanceSol * 0.10, state.balanceSol - 0.5); // 10% per trade (1/min mode)
     if (solToSpend < 0.1) {
       save(STATE_FILE, state); save(TRADES_FILE, trades);
       return;
@@ -360,6 +365,7 @@ async function tick() {
       pairAddress: pair.pairAddress,
     };
     state.tradedToday[mint] = Date.now();
+    state._lastBuyTime = Date.now();
     
     trades.push({
       type: 'BUY', symbol, mint, solAmount: +solAfterFee.toFixed(6),
@@ -385,8 +391,8 @@ async function tick() {
 }
 
 function start(intervalMs = 10000) {
-  console.log('📝 AUTOBAGS Paper Trader v2 — HFT MODE | 10s tick');
-  console.log('   5 positions ✅ | Score 65+ ✅ | 5% SL ✅ | 10% TP ✅ | 10min hold max ✅');
+  console.log('📝 AUTOBAGS Paper Trader v2 — 1 TRADE/MIN MODE | 10s tick');
+  console.log('   10 positions ✅ | Score 65+ ✅ | 5% SL ✅ | 10% TP ✅ | 10min hold max ✅');
   tick().catch(console.error);
   return setInterval(() => tick().catch(console.error), intervalMs);
 }
