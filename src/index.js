@@ -81,9 +81,10 @@ app.listen(PORT, () => {
   // const { start } = require('./bot/agent');
   // start(30000);
 
-  // Paper trader v2 — rebuilt scoring, pair locking, volume acceleration
-  const paper = require('./bot/paper-trader-v2');
-  paper.start(10000);
+  // Paper trader v3 — Sura's strategy: quality > quantity
+  // v2 went 24W/28L at -15.8%. Lessons: tighter SL, higher threshold, fewer trades.
+  const paper = require('./bot/paper-trader-v3');
+  paper.start(15000); // 15s tick — patient, deliberate
 
   // Social intelligence cron — Twitter, KOLs, sentiment
   const socialCron = require('./bot/social-cron');
