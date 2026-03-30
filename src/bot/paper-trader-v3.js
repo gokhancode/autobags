@@ -153,16 +153,17 @@ function scoreCandidate(pair) {
   return { score, reasons };
 }
 
-// ── Social sentiment check ──────────────────────────────────────────────
+// ── Social intelligence check ───────────────────────────────────────────
 
-function getSocialScore(symbol, mint) {
+async function getSocialScore(symbol, mint) {
   try {
-    const sentiment = require('./sentiment-engine');
-    const key = mint || symbol;
-    if (!key) return 0;
-    const s = sentiment.getSentiment(key);
-    return s.score || 0;
-  } catch { return 0; }
+    const twitter = require('./twitter-tracker');
+    const result = await twitter.getFullSocialScore(symbol, mint);
+    return {
+      score: result.score || 0,
+      hasRealPresence: result.hasRealPresence || false,
+    };
+  } catch { return { score: 0, hasRealPresence: false }; }
 }
 
 // ── Main tick ───────────────────────────────────────────────────────────
@@ -361,13 +362,16 @@ async function tick() {
     const { score, reasons } = scoreCandidate(priceData.pair);
     if (score < 70) continue; // hard threshold — no compromises
 
-    // Social sentiment bonus/filter
+    // Social intelligence — real presence check
     const symbol = priceData.pair.baseToken?.symbol;
-    const socialScore = getSocialScore(symbol, mint);
+    const socialData = await getSocialScore(symbol, mint);
+    const socialScore = socialData.score;
     
-    // Bonus for social buzz (up to +10)
-    const socialBonus = socialScore > 60 ? 10 : socialScore > 40 ? 5 : 0;
-    const finalScore = score + socialBonus;
+    // Bonus for real social presence (up to +10)
+    const socialBonus = socialScore > 60 ? 10 : socialScore > 30 ? 5 : 0;
+    // Penalty for NO social presence at all — sketchy token
+    const socialPenalty = (!socialData.hasRealPresence && socialScore < 10) ? -10 : 0;
+    const finalScore = score + socialBonus + socialPenalty;
 
     if (finalScore > bestScore) {
       bestScore = finalScore;
