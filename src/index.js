@@ -35,6 +35,7 @@ app.use(express.static(path.join(__dirname, 'web')));
   app.use(`${prefix}/api/chat`,        require('./api/chat'));
   app.use(`${prefix}/api/analytics`,   require('./api/analytics'));
   app.use(`${prefix}/api/leaderboard`, require('./api/leaderboard'));
+  app.use(`${prefix}/api/social`,      require('./api/social'));
 });
 
 // Global error handler
@@ -82,7 +83,11 @@ app.listen(PORT, () => {
 
   // Paper trader v2 — rebuilt scoring, pair locking, volume acceleration
   const paper = require('./bot/paper-trader-v2');
-  paper.start(30000);
+  paper.start(10000);
+
+  // Social intelligence cron — Twitter, KOLs, sentiment
+  const socialCron = require('./bot/social-cron');
+  socialCron.startSocialCron();
 
   // Sim + tournament paused
   // const sim = require('./bot/simulator');

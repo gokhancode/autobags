@@ -193,34 +193,34 @@ async function tick() {
     let shouldSell = false;
     let reason = '';
     
-    // Stop loss: 10% (wider — our data showed tight SL = 100% loss rate)
-    if (pricePct <= -10) {
+    // Stop loss: 5% (tighter for HFT — cut fast)
+    if (pricePct <= -5) {
       shouldSell = true;
       reason = `stop loss (${pricePct.toFixed(1)}%)`;
     }
     
-    // Trailing stop: only activates after +5% from entry
+    // Trailing stop: activates after +3% from entry
     if (pos.highPrice && pos.entryPrice) {
       const fromEntry = ((pos.highPrice - pos.entryPrice) / pos.entryPrice) * 100;
       const fromHigh = ((current - pos.highPrice) / pos.highPrice) * 100;
       
-      if (fromEntry > 15 && fromHigh < -3) {
+      if (fromEntry > 10 && fromHigh < -2) {
         shouldSell = true;
         reason = `trailing stop (peak +${fromEntry.toFixed(1)}%, now ${fromHigh.toFixed(1)}% from high)`;
-      } else if (fromEntry > 5 && fromHigh < -4) {
+      } else if (fromEntry > 3 && fromHigh < -3) {
         shouldSell = true;
         reason = `trailing stop (peak +${fromEntry.toFixed(1)}%, now ${fromHigh.toFixed(1)}% from high)`;
       }
     }
     
-    // Max hold: 30min (was 15min — let winners breathe)
-    if (holdMin >= 30 && pricePct < 3) {
+    // Max hold: 10min (HFT — in and out fast)
+    if (holdMin >= 10 && pricePct < 2) {
       shouldSell = true;
       reason = `stale (${Math.round(holdMin)}min, ${pricePct.toFixed(1)}%)`;
     }
     
-    // Take profit: 20% (lock it in)
-    if (pricePct >= 20) {
+    // Take profit: 10% (take it and move on)
+    if (pricePct >= 10) {
       shouldSell = true;
       reason = `take profit (+${pricePct.toFixed(1)}%)`;
     }
@@ -262,20 +262,13 @@ async function tick() {
   
   // ── Max positions ─────────────────────────────────────────────────────
   const openCount = Object.keys(state.positions).length;
-  if (openCount >= 2) { // max 2 positions — focused
+  if (openCount >= 5) { // HFT: up to 5 concurrent positions
     save(STATE_FILE, state); save(TRADES_FILE, trades);
     return;
   }
   
   // ── Post-loss cooldown ────────────────────────────────────────────────
-  const lastSell = trades.filter(t => t.type === 'SELL').pop();
-  if (lastSell && (lastSell.pnlSol || 0) < 0) {
-    const msSinceLoss = Date.now() - new Date(lastSell.time).getTime();
-    if (msSinceLoss < 5 * 60 * 1000) { // 5min cooldown after loss
-      save(STATE_FILE, state); save(TRADES_FILE, trades);
-      return;
-    }
-  }
+  // HFT: no cooldown — keep firing
   
   // ── Scout candidates ──────────────────────────────────────────────────
   let candidates = [];
@@ -317,8 +310,8 @@ async function tick() {
     if (!mint) continue;
     if (state.positions[mint]) continue;
     
-    // One shot per token per day
-    if (state.tradedToday[mint]) continue;
+    // One shot per token per 10min (HFT: allow re-entry after cooldown)
+    if (state.tradedToday[mint] && Date.now() - state.tradedToday[mint] < 10 * 60 * 1000) continue;
     
     // Get price data (includes full pair info)
     const priceData = await getPrice(mint);
@@ -326,13 +319,13 @@ async function tick() {
     
     const { score, reasons } = scoreCandidate(priceData.pair);
     
-    if (score > bestScore && score >= 80) {
+    if (score > bestScore && score >= 65) {
       bestScore = score;
       bestCandidate = { mint, score, reasons, priceData };
     }
     
-    // Rate limit: don't hammer DexScreener
-    await new Promise(r => setTimeout(r, 200));
+    // Rate limit: lighter for HFT
+    await new Promise(r => setTimeout(r, 100));
   }
   
   // ── Execute best candidate ────────────────────────────────────────────
@@ -345,8 +338,8 @@ async function tick() {
     // Lock pair
     lockPair(mint, pair.pairAddress);
     
-    // Position sizing: 35% of balance
-    const solToSpend = Math.min(state.balanceSol * 0.35, state.balanceSol - 0.5);
+    // Position sizing: 15% of balance (smaller per trade, more trades)
+    const solToSpend = Math.min(state.balanceSol * 0.15, state.balanceSol - 0.5);
     if (solToSpend < 0.1) {
       save(STATE_FILE, state); save(TRADES_FILE, trades);
       return;
@@ -391,9 +384,9 @@ async function tick() {
   save(TRADES_FILE, trades);
 }
 
-function start(intervalMs = 30000) {
-  console.log('📝 AUTOBAGS Paper Trader v2 — $2000 virtual | 30s tick');
-  console.log('   Pair locking ✅ | Volume accel scoring ✅ | 10% SL ✅ | 1 trade/token/day ✅');
+function start(intervalMs = 10000) {
+  console.log('📝 AUTOBAGS Paper Trader v2 — HFT MODE | 10s tick');
+  console.log('   5 positions ✅ | Score 65+ ✅ | 5% SL ✅ | 10% TP ✅ | 10min hold max ✅');
   tick().catch(console.error);
   return setInterval(() => tick().catch(console.error), intervalMs);
 }

@@ -1,0 +1,16 @@
+{
+  "name": "autobags-tg-relay",
+  "version": "1.0.0",
+  "description": "Local Telegram relay — reads your groups, sends crypto mentions to autobags VPS",
+  "main": "relay.js",
+  "scripts": {
+    "start": "node relay.js",
+    "auth": "node auth.js",
+    "groups": "node list-groups.js"
+  },
+  "dependencies": {
+    "telegram": "^2.26.16",
+    "input": "^1.0.1",
+    "dotenv": "^16.6.1"
+  }
+}

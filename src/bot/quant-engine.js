@@ -58,6 +58,13 @@ function initBrain() {
       h6_trend_up:         { weight: 1.0, wins: 0, losses: 0, totalPnl: 0, occurrences: 0, desc: '6h trend positive' },
       h6_trend_down:       { weight: 1.0, wins: 0, losses: 0, totalPnl: 0, occurrences: 0, desc: '6h trend negative' },
       txn_count_high:      { weight: 1.0, wins: 0, losses: 0, totalPnl: 0, occurrences: 0, desc: '1h transactions > 100' },
+      // Social intelligence signals
+      social_surge:        { weight: 1.0, wins: 0, losses: 0, totalPnl: 0, occurrences: 0, desc: 'Sentiment jumped 30+ pts in 1h' },
+      kol_mention:         { weight: 1.0, wins: 0, losses: 0, totalPnl: 0, occurrences: 0, desc: 'Mentioned by 2+ tracked KOLs in 1h' },
+      multi_source_convergence: { weight: 1.0, wins: 0, losses: 0, totalPnl: 0, occurrences: 0, desc: 'Appears on Twitter + Telegram + DexScreener' },
+      social_momentum_pos: { weight: 1.0, wins: 0, losses: 0, totalPnl: 0, occurrences: 0, desc: 'Mention velocity increasing' },
+      social_momentum_neg: { weight: 1.0, wins: 0, losses: 0, totalPnl: 0, occurrences: 0, desc: 'Mention velocity declining' },
+      alpha_call_detected: { weight: 1.0, wins: 0, losses: 0, totalPnl: 0, occurrences: 0, desc: 'Alpha call detected from TG group' },
     },
 
     // Volatility regime tracking
@@ -154,6 +161,48 @@ function detectSignals(tokenData) {
 
   // Transaction count
   if (d.buys1h + d.sells1h > 100)      signals.push('txn_count_high');
+
+  // ── Social intelligence signals ──────────────────────────────────────
+  try {
+    const sentimentEngine = require('./sentiment-engine');
+    const symbol = d.symbol || d.baseToken?.symbol;
+    const mint = d.mint || d.baseToken?.address;
+    const key = mint || symbol;
+
+    if (key) {
+      const sent = sentimentEngine.getSentiment(key);
+      const velocity = sentimentEngine.getMentionVelocity(key, 60);
+
+      // Social surge: sentiment > 60 with multiple sources
+      if (sent.score > 60 && sent.sources >= 2)  signals.push('social_surge');
+
+      // Multi-source convergence
+      if (sent.convergence)                       signals.push('multi_source_convergence');
+
+      // Mention velocity signals
+      if (velocity.isSurging)                     signals.push('social_momentum_pos');
+      if (velocity.velocityChange < -50)          signals.push('social_momentum_neg');
+
+      // Alpha call detected
+      const alerts = sentimentEngine.getAlphaAlerts();
+      const hasAlpha = alerts.some(a =>
+        (a.mint && a.mint === mint) || (a.symbol && a.symbol === symbol?.toUpperCase())
+      );
+      if (hasAlpha)                               signals.push('alpha_call_detected');
+
+      // KOL mention (check if hot token from twitter tracker)
+      try {
+        const twitter = require('./twitter-tracker');
+        const kols = twitter.loadKOLs();
+        // Check sentiment mentions for KOL sources
+        if (sent.recentMentions?.some(m => m.source === 'twitter' && m.confidence >= 80)) {
+          signals.push('kol_mention');
+        }
+      } catch {}
+    }
+  } catch (err) {
+    // Social signals are optional — never break scoring if they fail
+  }
 
   return signals;
 }
