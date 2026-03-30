@@ -86,6 +86,8 @@ function scoreCandidate(pair) {
   // ── HARD REJECTS ──
   if (liq < 8000) return { score: 0, reasons: ['liq < $8k'] };
   if (vol24 / Math.max(liq, 1) > 15) return { score: 0, reasons: ['vol/liq ratio dangerous'] };
+  // vol/liq > 8x on 1h = active dump in progress (data: SHARE, ANIME both had 6x+ before -20%+ losses)
+  if (vol1h / Math.max(liq, 1) > 8) return { score: 0, reasons: ['1h vol/liq dump signal'] };
   if (m5 < 1) return { score: 0, reasons: ['no 5m momentum'] };
   if (m5 > 30) return { score: 0, reasons: ['already pumped'] };
   if (h1 > 60) return { score: 0, reasons: ['too late, h1 > 60%'] };
@@ -286,6 +288,16 @@ async function tick() {
   if (openCount >= 3) {
     save(STATE_FILE, state); save(TRADES_FILE, trades);
     return;
+  }
+
+  // ── Time gate: only trade proven profitable hours ─────────────────────
+  // Data: 01-02 UTC (+13%), 08-09 UTC (+12%), 13 UTC (+5.9%)
+  // Data: 15-18 UTC (-4.7% to -12%) = hard block
+  const utcHour = new Date().getUTCHours();
+  const BLOCKED_HOURS = [10, 11, 12, 15, 16, 17, 18, 19]; // data-proven bad
+  if (BLOCKED_HOURS.includes(utcHour)) {
+    save(STATE_FILE, state); save(TRADES_FILE, trades);
+    return; // sit on hands
   }
 
   // ── Scout candidates ──────────────────────────────────────────────────

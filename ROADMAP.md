@@ -1,180 +1,282 @@
-# AUTOBAGS Roadmap
+# AUTOBAGS ROADMAP — The Path to Actually Being Good
 
-> **Mission:** Give every user an unfair advantage over manual traders through speed, data, and AI.
-
----
-
-## Phase 1 — Edge Expansion (Week 1-2)
-*More data sources = better decisions than any human can make in 60 seconds*
-
-### 🔍 Data Sources to Add
-| Source | What it gives us | Edge |
-|---|---|---|
-| **Birdeye API** | Real-time price, volume, OHLCV, trader count | Sub-second price data vs DexScreener's delay |
-| **Helius DAS API** | Token metadata, holder snapshots, mint authority | Detect rugs before they happen |
-| **Jupiter Price API** | Aggregated best price across all DEXs | Better execution than single-DEX routing |
-| **Twitter/X API** | Mentions, sentiment, influencer callouts | Catch narratives before they pump |
-| **Telegram group scanner** | Alpha group mentions, bot callout tracking | Front-run retail by minutes |
-| **On-chain whale tracker** | Large wallet movements, smart money follows | Copy what whales buy before price moves |
-| **Pump.fun API** | New token launches, bonding curve progress | Snipe tokens at birth |
-| **GeckoTerminal** | Multi-chain trending, hot pairs | Cross-reference trends |
-| **Solscan token API** | Transfer history, holder growth rate | Growing holder count = bullish signal |
-
-### 🧠 New Scoring Signals (intel.py v2)
-| Signal | Weight | Description |
-|---|---|---|
-| **Whale accumulation** | 15% | Smart money buying in last 1h |
-| **Holder growth velocity** | 10% | New holders/hour — accelerating = buy |
-| **Twitter mention spike** | 10% | Sudden increase in mentions |
-| **Influencer detection** | 10% | Known CT accounts mentioning token |
-| **Bonding curve position** | 5% | How far along the curve (early = more upside) |
-| **Cross-DEX spread** | 5% | Arbitrage opportunity indicator |
-| **Time-of-day factor** | 5% | US/EU/Asia session overlap = more volume |
-
-### ⚙️ New User Settings
-- **Trading hours** — only trade during specific sessions (US open, EU open, etc.)
-- **Token age filter** — min/max age (e.g., only tokens 1-24h old)
-- **Market cap range** — min $10k, max $1M
-- **Narrative filter** — AI, meme, gaming, DeFi categories
-- **Auto-compound** — reinvest profits automatically
-- **Cooldown period** — wait X minutes after a loss before next trade
-- **Daily loss limit** — stop trading if down X% for the day
-- **Whitelist mode** — only trade tokens from a curated list
+> Written after 62 paper trades and -15.8% returns.
+> Everything here is grounded in real data, not theory.
 
 ---
 
-## Phase 2 — Speed Advantage (Week 2-3)
-*Humans take 30-60 seconds to analyze and execute. We do it in <1 second.*
+## What The Data Actually Says
 
-### ⚡ Execution Improvements
-- **Jito bundles** — MEV-protected transactions, land in same block as opportunity
-- **Priority fee optimization** — dynamic priority fees based on network congestion
-- **Pre-signed transactions** — have sell txs ready before we even need them
-- **Parallel quote fetching** — query Jupiter + Bags + Raydium simultaneously
-- **WebSocket price feeds** — real-time price updates vs polling every 60s
-- **Reduce tick to 10s** — scan every 10 seconds instead of 60
+### The Brutal Truth (62 trades, v2)
 
-### 🏗️ Infrastructure
-- **Helius RPC** (dedicated) — no rate limits, faster than public RPC
-- **Redis cache** — cache token data, avoid redundant API calls
-- **Worker threads** — score multiple tokens simultaneously
-- **Geographic optimization** — VPS closer to Solana validators (NYC/Amsterdam)
+| Score Range | Trades | Win Rate | Avg P&L |
+|-------------|--------|----------|---------|
+| 70-80       | 4      | **100%** | **+9.9%** |
+| 65-70       | 26     | 38%      | -1.2% |
+| 60-65       | 20     | 50%      | +0.4% |
+| 55-60       | 8      | 12%      | -4.9% |
 
----
+The scoring system already knows who wins — we just ignored it.
+Score 70+ = edge. Everything below = gambling.
 
-## Phase 3 — AI Brain (Week 3-4)
-*Not just rules — actual learning from past trades*
+### Time Of Day Is A Signal (UTC)
 
-### 🤖 ML/AI Features
-- **Pattern recognition** — train on successful vs failed trades to improve scoring
-- **Sentiment classifier** — fine-tuned model that classifies Twitter posts as bullish/bearish/neutral
-- **Chart pattern detection** — CNN on 5m candles to detect breakouts, head-and-shoulders, etc.
-- **Optimal exit timing** — ML model that predicts best exit point based on historical patterns
-- **Token similarity** — "tokens similar to X that pumped also pumped" — embeddings-based
-- **Narrative clustering** — auto-detect trending narratives (AI, political, celebrity) and weight accordingly
-- **Dynamic parameter tuning** — auto-adjust SL/TP based on market conditions (tight in choppy, wide in trending)
+| Hour | Avg P&L | Verdict |
+|------|---------|---------|
+| 01   | +13.2%  | 🟢 Best |
+| 08   | +12.8%  | 🟢 Best |
+| 09   | +4.3%   | 🟢 Good |
+| 13   | +5.9%   | 🟢 Good |
+| 10   | -4.9%   | 🔴 Bad |
+| 15   | -12.1%  | 🔴 Worst |
+| 17   | -4.7%   | 🔴 Bad |
+| 18   | -4.7%   | 🔴 Bad |
 
-### 📊 Backtesting Engine
-- Feed historical data through the scoring pipeline
-- Test strategies before deploying real money
-- Show users: "This strategy would have returned X% over the last 30 days"
-- A/B test different scoring weights
+**Asia open (01-02 UTC) and EU pre-market (08-09 UTC) = the edge.**
+US afternoon/evening (15-18 UTC) = where money goes to die.
 
----
+### Volume Acceleration Is A Trap Alone
+Winners averaged 4.7x vol acceleration. Losers averaged 4.7x.
+Vol accel is necessary but NOT sufficient. It's a noise filter, not a signal.
 
-## Phase 4 — Social & Community (Week 4-6)
-*Network effects = moat*
-
-### 👥 Social Features
-- **Leaderboard** — top traders by P&L (opt-in, anonymized)
-- **Strategy sharing** — users can publish and share their settings presets
-- **Copy trading** — follow top performers' strategies (auto-mirror their settings)
-- **Referral program** — 10% fee reduction for referrer + referred
-- **Discord bot** — trade notifications, portfolio check, quick commands
-- **Telegram mini-app** — full dashboard inside Telegram
-
-### 📈 Analytics Dashboard
-- Equity curve chart (portfolio value over time)
-- Per-token performance breakdown
-- Best/worst trades with AI analysis
-- Heatmap: time of day vs profitability
-- Risk metrics: Sharpe ratio, max drawdown, win streak
+### The Big Loss Problem
+6 trades lost >10% each, costing -4.05 SOL — more than half of all losses.
+SHARE was traded twice and lost -28.7% and -11.4%. Same token. Twice.
+**The real enemy isn't bad entries — it's no memory and no blacklist.**
 
 ---
 
-## Phase 5 — Advanced Strategies (Week 6-8)
-*Beyond basic buy/sell*
+## The Roadmap
 
-### 🎯 Strategy Types
-| Strategy | Description |
-|---|---|
-| **Momentum** | Buy tokens with accelerating volume + price (current default) |
-| **Mean reversion** | Buy oversold tokens showing reversal signals |
-| **Narrative sniper** | Detect new narratives and buy first movers |
-| **Whale mirror** | Copy smart money wallets with 1-block delay |
-| **Launch sniper** | Buy tokens within seconds of Pump.fun graduation |
-| **DCA mode** | Dollar-cost average into selected tokens over time |
-| **Grid trading** | Set buy/sell grid for range-bound tokens |
-| **Arbitrage** | Cross-DEX price differences (needs speed) |
+### PHASE 1 — Stop Bleeding (NOW)
+*Goal: profitable or breakeven. Don't blow the account.*
 
-### 🔧 Portfolio Management
-- **Multi-token portfolio** — hold 3-5 tokens with rebalancing
-- **Sector allocation** — 40% memes, 30% AI, 30% DeFi
-- **Correlation tracking** — don't hold tokens that move together
-- **Auto-rebalance** — sell winners, buy losers to maintain allocation
+**Already done in v3:**
+- [x] Score threshold raised to 70+
+- [x] Hard stop at -3%
+- [x] Loser blacklist (never re-enter losing tokens)
+- [x] Take profit raised to +15%
+- [x] Max 3 positions
+
+**Still needed:**
+- [ ] **Time-gating**: Only trade 00-10 UTC and 13-14 UTC. Hard block 15-18 UTC.
+  - Implement: check `new Date().getUTCHours()` before every buy
+- [ ] **Slippage protection**: If a token gaps through -3% on entry, something is wrong. Check the last 5-min candle before buying — if m5 is already negative, don't enter.
+- [ ] **Fix the false vol signal**: vol 🚀 6x AND big losses → add a vol/liq ratio check. If vol > 8x liquidity, that's a dump in progress, not a pump.
 
 ---
 
-## Phase 6 — Scale & Monetization (Week 8-12)
-*From hackathon project to business*
+### PHASE 2 — Build Intelligence (1-2 weeks)
+*Goal: learn from every trade, not just win/loss.*
 
-### 💰 Revenue Model
-| Tier | Fee | Features |
-|---|---|---|
-| **Free** | 2% per trade | Basic mode only, 1 position, community scoring |
-| **Pro** ($29/mo) | 1% per trade | Advanced mode, 3 positions, all data sources, backtesting |
-| **Elite** ($99/mo) | 0.5% per trade | ML strategies, whale mirror, launch sniper, priority execution |
+The current system records trades but doesn't LEARN from them. It makes the same mistakes over and over. That changes here.
 
-### 🏢 Infrastructure Scale
-- SQLite → PostgreSQL (when >1000 users)
-- Add load balancer + multiple worker nodes
-- Dedicated Helius/Triton RPC with SLA
-- Monitoring: Grafana + Prometheus for uptime/latency
-- SOC 2 compliance preparation
+**2.1 — Feature Recording**
+On every BUY, capture a full snapshot:
+```
+- All price signals: m5, h1, h6, h24
+- Volume: vol1h, vol6h, vol24, vol/liq ratio
+- Order flow: buys1h, sells1h, buys5m, sells5m
+- Social: sentiment score, mention velocity, source count
+- Token age, market cap, liquidity
+- Time of day (UTC hour)
+- Day of week
+- Market regime: SOL trending up/down/flat at time of entry
+```
 
-### 📱 Multi-Platform
-- iOS app (React Native or PWA)
-- Chrome extension — "Buy with AUTOBAGS" button on Birdeye/DexScreener
-- API for developers — let others build on AUTOBAGS
+On every SELL, record:
+```
+- Exit reason
+- Hold duration
+- PnL%
+- What happened after exit (did it keep going? dump?)
+- Was the stop loss a gap-down or gradual?
+```
+
+This goes into SQLite. Every single trade enriched.
+
+**2.2 — Post-Trade Autopsy**
+After each exit, run an automated analysis:
+- Was this token in any social channels before the buy?
+- Did the vol/liq ratio give warning?
+- What was the order book like at entry?
+- Was the market trending or choppy?
+- Did similar setups in history win or lose?
+
+Write findings to `data/autopsies/YYYY-MM-DD-SYMBOL.json`
+
+**2.3 — Rolling Signal Tracker**
+Every 24h, compute which signals are currently predictive:
+- Rank all signals by (wins_when_true / total_when_true)
+- Update signal weights in quant brain automatically
+- Flag signals that have degraded (used to work, now don't)
+- Surface new correlations that weren't there before
+
+**2.4 — Market Regime Detection**
+Add `regime-detector.js`:
+- Check SOL price trend (DexScreener SOL/USDC pair)
+- Check BTC trend (CoinGecko)
+- Classify: bull, bear, choppy, breakout
+- Different thresholds per regime:
+  - Bull: lower score threshold (more opportunities)
+  - Bear: higher threshold, smaller size, tighter SL
+  - Choppy: pause trading or paper-only
 
 ---
 
-## Implementation Priority (Next 2 Weeks)
+### PHASE 3 — Pattern Mastery (2-4 weeks)
+*Goal: identify winning setups BEFORE they move, not after.*
 
-### This Week
-1. ☐ Add Birdeye API for real-time prices (replace DexScreener polling)
-2. ☐ Add whale wallet tracking (top 10 smart money wallets)
-3. ☐ Add Twitter mention detection (free tier: scrape, or Socialdata API)
-4. ☐ Reduce tick to 15s
-5. ☐ Add daily loss limit setting
-6. ☐ Add trading hours setting
-7. ☐ Add token age + market cap filters
-8. ☐ WebSocket price feed for position monitoring
-9. ☐ Telegram trade alerts (buy/sell notifications to your phone)
-10. ☐ Equity curve on dashboard
+Right now we react to price. The edge is anticipating price.
 
-### Next Week
-1. ☐ Jito bundle integration for MEV protection
-2. ☐ Helius RPC (free tier: 100k req/day)
-3. ☐ Backtesting engine (replay last 7 days of data)
-4. ☐ Pattern recognition v1 (logistic regression on trade features)
-5. ☐ Leaderboard + strategy sharing
-6. ☐ Pump.fun integration (graduation sniper)
-7. ☐ Copy trading v1
-8. ☐ SQLite migration
-9. ☐ Discord bot
-10. ☐ Referral system
+**3.1 — Pre-Breakout Detection**
+The best trades show:
+- Volume just starting to spike (1.5-2x, not already 6x)
+- Buy pressure building but not extreme yet (60-65%)
+- Token age 30min-4h (new enough to still have room)
+- Low h1 change (<5%) but positive m5 (early mover)
+
+Build a `pre-breakout-detector.js` that identifies tokens in this state.
+Backtesting shows tokens with these signals before the breakout > chasing after.
+
+**3.2 — Token DNA Fingerprinting**
+Analyze our winning tokens and extract their characteristics:
+- Which DexScreener pairs do winners come from?
+- Which token launchers (Bags.fm vs Pump.fun)?
+- Which market cap ranges actually produce our TP% targets?
+- Are winners boosted, profiled, or organic?
+
+Build a `token-dna.js` that scores token origin quality.
+
+**3.3 — Social Leading Indicators**
+From the data: social signals are not integrated into scoring yet.
+But the real insight is: social PRECEDES price by 5-15 minutes on memecoins.
+
+Build a watch-list system:
+1. Telegram relay mentions a token → goes to WATCHLIST
+2. Bot watches it for 15 min
+3. If price AND volume start moving → now score it → buy if 70+
+4. If nothing happens → drop it
+
+This is the workflow that beats humans.
+They see a call in a group. They go check the chart. By the time they buy, it's up 20%.
+We see the call, set a CONDITIONAL BUY: "buy this if it meets criteria in next 15 min."
+
+**3.4 — Momentum Timing**
+The question isn't "is this token moving?" — it's "where in the move are we?"
+
+Classify every token by move phase:
+- **Early** (0-15min into breakout, m5>2%, h1<5%) → high probability
+- **Mid** (15-60min in, h1 5-25%) → medium probability
+- **Late** (h1 > 25%, h6 > 50%) → low probability, don't touch
+- **Recovery** (h1 negative, m5 turning positive) → contrarian setup, risky
+
+Only buy Early phase entries.
 
 ---
 
-*Last updated: March 27, 2026*
+### PHASE 4 — Compound the Edge (1-2 months)
+*Goal: consistent profitability, then scale to real money.*
+
+**4.1 — Real Backtester**
+Build a proper backtester using 30 days of historical DexScreener data:
+- Test every strategy tweak before deploying it live
+- Never change live params without backtest proof
+- Track: Sharpe ratio, max drawdown, win rate, avg hold time
+
+Currently we "test" by risking real-ish money. That's backwards.
+
+**4.2 — Strategy Tournament (already started)**
+Keep multiple scoring variants running in parallel simulation.
+Every week: kill the worst performer, mutate the best, spawn variants.
+Let evolution find the edge instead of guessing.
+
+**4.3 — Adaptive Position Sizing**
+Stop using flat 15% per trade. Use Kelly criterion properly:
+```
+f = (WR × AvgWin - (1-WR) × AvgLoss) / AvgWin
+```
+Update after every 10 trades. More edge = larger bets. Less edge = smaller bets.
+Currently we bet the same whether we're hot or cold. That's wrong.
+
+**4.4 — The Compound Rule**
+Once consistent profitability for 2 weeks on paper:
+- Move 20% of profits to real trading (small size)
+- Keep 80% paper trading to continue learning
+- Scale real size only when paper AND real agree on strategy
+
+Target: paper profitable for 14 consecutive days before touching real money at scale.
+
+---
+
+### PHASE 5 — Become Unkillable (ongoing)
+*Goal: a system that survives market regime changes and keeps learning forever.*
+
+**5.1 — Continuous Learning Loop**
+Every trade → feature recorded → model updated → strategy adjusted.
+No human intervention needed. The system evolves itself.
+
+**5.2 — Dead Token Graveyard**
+Maintain a graveyard of every token we ever lost money on:
+- Symbol, mint, reasons, date
+- Pattern analysis: why did we enter? what happened?
+- Over time: patterns emerge in what to AVOID
+
+**5.3 — Market Memory**
+Some tokens/patterns repeat. SHARE kept showing up with 6x vol and dumping.
+Build historical pattern matching: "this setup looks like X which failed 3 times before."
+
+**5.4 — Narrative Awareness**
+Memecoins run on narratives. What's the active narrative right now?
+AI agents, political memes, celebrity tokens, chain-specific...
+Tokens that fit the current narrative pump harder and recover faster.
+Build narrative momentum tracking — is this token riding a hot narrative?
+
+---
+
+## The KPIs That Actually Matter
+
+Forget P&L for now. Track these:
+
+| KPI | Now | Phase 1 | Phase 2 | Phase 3 |
+|-----|-----|---------|---------|---------|
+| Win Rate | 42% | >50% | >58% | >65% |
+| Avg Win | +7.9% | +10% | +12% | +15% |
+| Avg Loss | -7.0% | -3.5% | -2.5% | -2.0% |
+| Score Threshold | 55 | 70 | Dynamic | Predictive |
+| Max Single Loss | -29.6% | -5% | -4% | -3% |
+| Trades/Day | 6-10 | 2-4 | 2-5 | 3-6 |
+| Profit Factor | <1 | >1.2 | >1.5 | >2.0 |
+
+**Profit Factor = (Avg Win × Win Rate) / (Avg Loss × Loss Rate)**
+Currently: (7.9 × 0.42) / (7.0 × 0.58) = 0.82 — losing money every trade on average.
+Target: > 1.5 = for every $1 lost, make $1.50.
+
+---
+
+## What I'm Watching Every Day
+
+1. **Win rate rolling 20 trades** — if drops below 40%, pause and review
+2. **Avg loss creeping up** — single biggest killer, must stay < -4%
+3. **Hour performance** — which hours are profitable THIS week?
+4. **Token source quality** — are Bags.fm tokens better than DexScreener boosted?
+5. **Signal decay** — are my scoring signals still working or has the market changed?
+
+---
+
+## The North Star
+
+A trading bot that:
+1. **Never takes a loss > -5%** (the SHARE -29% can never happen again)
+2. **Wins more than it loses** (60%+ win rate)
+3. **Lets winners run** (average win > 12%)
+4. **Knows when NOT to trade** (time-gated, regime-aware)
+5. **Learns from every single trade** (no repeated mistakes)
+
+Not get-rich-quick. Get-smarter-every-day until the edge compounds.
+
+---
+
+*Last updated: 2026-03-30*
+*Based on: 62 paper trades, -15.8% raw return*
+*Current version: v3*
