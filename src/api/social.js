@@ -6,6 +6,7 @@
 const { Router } = require('express');
 const sentiment = require('../bot/sentiment-engine');
 const twitter = require('../bot/twitter-tracker');
+const { requireAuth } = require('./auth');
 
 const router = Router();
 
@@ -78,7 +79,7 @@ router.get('/kols', async (req, res) => {
   }
 });
 
-router.post('/kols', (req, res) => {
+router.post('/kols', requireAuth, (req, res) => {
   const { action, handle, label } = req.body;
   const kols = twitter.loadKOLs();
 

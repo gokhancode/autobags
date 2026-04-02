@@ -6,6 +6,8 @@
 
 const express = require('express');
 const router = express.Router();
+const auth = require('./auth');
+const requireAuth = auth.requireAuth;
 const fs = require('fs');
 const path = require('path');
 
@@ -65,7 +67,7 @@ Be concise but insightful. Give specific, actionable advice based on the data ab
 }
 
 // POST /api/chat
-router.post('/', async (req, res) => {
+router.post('/', requireAuth, async (req, res) => {
   const { userId, message } = req.body;
   if (!userId || !message) return res.status(400).json({ error: 'userId and message required' });
   if (!GROQ_KEY) return res.status(500).json({ error: 'AI not configured' });
@@ -122,13 +124,13 @@ router.post('/', async (req, res) => {
 });
 
 // GET /api/chat/history/:userId
-router.get('/history/:userId', (req, res) => {
+router.get('/history/:userId', requireAuth, (req, res) => {
   const history = chatHistory[req.params.userId] || [];
   res.json({ success: true, messages: history });
 });
 
 // POST /api/chat/analyze — Quick token analysis
-router.post('/analyze', async (req, res) => {
+router.post('/analyze', requireAuth, async (req, res) => {
   const { mint, userId } = req.body;
   if (!mint) return res.status(400).json({ error: 'mint required' });
   if (!GROQ_KEY) return res.status(500).json({ error: 'AI not configured' });

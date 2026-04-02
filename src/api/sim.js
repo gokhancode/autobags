@@ -4,6 +4,8 @@
  */
 const router = require('express').Router();
 const sim = require('../bot/simulator');
+const auth = require('./auth');
+const requireAuth = auth.requireAuth;
 
 // GET /api/sim — get sim stats
 router.get('/', (req, res) => {
@@ -25,8 +27,8 @@ router.get('/equity', (req, res) => {
   res.json({ success: true, curve: state.equityCurve || [] });
 });
 
-// POST /api/sim/reset — reset with new balance
-router.post('/reset', (req, res) => {
+// POST /api/sim/reset — reset with new balance (AUTH REQUIRED)
+router.post('/reset', requireAuth, (req, res) => {
   const balance = parseFloat(req.body.balanceUsd) || 1000;
   sim.stop();
   sim.initSim(balance);
