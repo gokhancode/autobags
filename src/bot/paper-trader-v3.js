@@ -166,6 +166,82 @@ async function getSocialScore(symbol, mint) {
   } catch { return { score: 0, hasRealPresence: false }; }
 }
 
+// ── CT Signal Integration ───────────────────────────────────────────────
+
+function getCTBoost(symbol, mint) {
+  try {
+    const ct = require('./ct-tracker');
+    const signals = ct.loadSignals();
+    const now = Date.now();
+    const window = 60 * 60 * 1000; // 1 hour window
+    
+    const recent = signals.filter(s => now - s.timestamp < window);
+    
+    let boost = 0;
+    let reasons = [];
+    let kolMentions = [];
+    
+    for (const sig of recent) {
+      const matchesSymbol = (sig.cashtags || []).includes(symbol?.toUpperCase());
+      const matchesMint = (sig.cas || []).includes(mint);
+      
+      if (!matchesSymbol && !matchesMint) continue;
+      
+      if (sig.source === 'kol' && sig.kol) {
+        kolMentions.push(sig.kol);
+        boost += 15; // KOL mention = strong signal
+      } else if (sig.source === 'narrative') {
+        boost += 20; // Narrative from big account = very strong
+        reasons.push('narrative');
+      } else if (sig.source === 'search') {
+        boost += 3; // General search mention
+      }
+    }
+    
+    // Convergence bonus — multiple KOLs = moonshot signal
+    const uniqueKols = [...new Set(kolMentions)];
+    if (uniqueKols.length >= 3) {
+      boost += 25; // GOLD convergence
+      reasons.push(`🥇 ${uniqueKols.length} KOLs`);
+    } else if (uniqueKols.length >= 2) {
+      boost += 15;
+      reasons.push(`🥈 ${uniqueKols.length} KOLs`);
+    } else if (uniqueKols.length === 1) {
+      reasons.push(`KOL: @${uniqueKols[0]}`);
+    }
+    
+    // Cap at 40 to not override chart analysis
+    boost = Math.min(boost, 40);
+    
+    return { boost, reasons, kolMentions: uniqueKols };
+  } catch { return { boost: 0, reasons: [], kolMentions: [] }; }
+}
+
+/**
+ * Get tokens that CT is buzzing about — use as additional candidates
+ */
+function getCTCandidates() {
+  try {
+    const ct = require('./ct-tracker');
+    const signals = ct.loadSignals();
+    const now = Date.now();
+    const window = 30 * 60 * 1000; // 30 min window
+    
+    const recent = signals.filter(s => now - s.timestamp < window);
+    const mints = new Set();
+    
+    for (const sig of recent) {
+      for (const ca of (sig.cas || [])) {
+        if (ca.length >= 32 && ca.length <= 44) {
+          mints.add(ca);
+        }
+      }
+    }
+    
+    return [...mints].map(mint => ({ mint, source: 'ct' }));
+  } catch { return []; }
+}
+
 // ── Main tick ───────────────────────────────────────────────────────────
 
 async function tick() {
@@ -213,6 +289,12 @@ async function tick() {
     if (pricePct <= -3) {
       shouldSell = true;
       reason = `hard stop (${pricePct.toFixed(1)}%)`;
+    }
+
+    // ── EMERGENCY STOP: if slippage blew past SL, cut immediately at -8% ──
+    if (!shouldSell && pricePct <= -8) {
+      shouldSell = true;
+      reason = `emergency stop (${pricePct.toFixed(1)}%)`;
     }
 
     // ── TRAILING STOP: only activates after +6% from entry ──
@@ -271,7 +353,8 @@ async function tick() {
 
       const emoji = pnlSol >= 0 ? '🟢' : '🔴';
       const totalPnlPct = ((state.balanceSol - state.startBalanceSol) / state.startBalanceSol * 100).toFixed(1);
-      const msg = `📝 v3 ${emoji} SELL $${pos.symbol}\n💰 ${pnlSol >= 0 ? '+' : ''}${pnlSol.toFixed(4)} SOL (${pnlPct.toFixed(1)}%)\n⏱ ${holdMin.toFixed(0)}min | ${reason}\n💼 ${state.balanceSol.toFixed(2)} SOL (${totalPnlPct}%) | ${state.wins}W/${state.losses}L`;
+      const sellMcStr = priceData.pair && (priceData.pair.marketCap || priceData.pair.fdv) ? `$${Number(priceData.pair.marketCap || priceData.pair.fdv).toLocaleString()}` : '?';
+      const msg = `📝 v3 ${emoji} SELL $${pos.symbol} | MC: ${sellMcStr}\n💰 ${pnlSol >= 0 ? '+' : ''}${pnlSol.toFixed(4)} SOL (${pnlPct.toFixed(1)}%)\n⏱ ${holdMin.toFixed(0)}min | ${reason}\n💼 ${state.balanceSol.toFixed(2)} SOL (${totalPnlPct}%) | ${state.wins}W/${state.losses}L\n<code>${mint}</code>`;
       console.log(`[v3] ${emoji} SELL $${pos.symbol} | ${pnlPct.toFixed(1)}% | ${reason} | bal ${state.balanceSol.toFixed(2)}`);
       notifier.sendTelegram(msg);
     }
@@ -344,7 +427,15 @@ async function tick() {
     }
   } catch {}
 
-  console.log(`[v3] Scanning ${candidates.length} candidates | ${state.balanceSol.toFixed(2)} SOL | ${openCount} open | ${state.wins}W/${state.losses}L`);
+  // Add CT-sourced candidates (tokens mentioned by KOLs with CAs)
+  const ctCandidates = getCTCandidates();
+  for (const ctc of ctCandidates) {
+    if (!candidates.find(c => c.mint === ctc.mint)) {
+      candidates.push(ctc);
+    }
+  }
+
+  console.log(`[v3] Scanning ${candidates.length} candidates (${ctCandidates.length} from CT) | ${state.balanceSol.toFixed(2)} SOL | ${openCount} open | ${state.wins}W/${state.losses}L`);
 
   let bestCandidate = null;
   let bestScore = 0;
@@ -362,6 +453,12 @@ async function tick() {
     const { score, reasons } = scoreCandidate(priceData.pair);
     if (score < 70) continue; // hard threshold — no compromises
 
+    // SLIPPAGE GUARD: skip illiquid tokens where SL will slip badly
+    const liq = parseFloat(priceData.pair.liquidity?.usd || 0);
+    const positionSizeUsd = state.balanceSol * 0.15 * (parseFloat(priceData.pair.quoteToken?.priceUsd) || 130);
+    if (liq < 15000) continue; // too thin, SL will slip to -20%+
+    if (positionSizeUsd / liq > 0.05) continue; // our trade > 5% of liquidity = guaranteed slippage
+
     // Social intelligence — real presence check
     const symbol = priceData.pair.baseToken?.symbol;
     const socialData = await getSocialScore(symbol, mint);
@@ -371,11 +468,20 @@ async function tick() {
     const socialBonus = socialScore > 60 ? 10 : socialScore > 30 ? 5 : 0;
     // Penalty for NO social presence at all — sketchy token
     const socialPenalty = (!socialData.hasRealPresence && socialScore < 10) ? -10 : 0;
-    const finalScore = score + socialBonus + socialPenalty;
+    
+    // CT signal boost — KOL mentions, narratives, convergence
+    const ctData = getCTBoost(symbol, mint);
+    const ctBoost = ctData.boost;
+    if (ctData.reasons.length > 0) reasons.push(...ctData.reasons);
+    
+    const finalScore = score + socialBonus + socialPenalty + ctBoost;
+
+    // HARD FILTER: finalScore must also be >= 70. No exceptions.
+    if (finalScore < 70) continue;
 
     if (finalScore > bestScore) {
       bestScore = finalScore;
-      bestCandidate = { mint, score: finalScore, baseScore: score, socialScore, reasons, priceData };
+      bestCandidate = { mint, score: finalScore, baseScore: score, socialScore, ctBoost, reasons, priceData };
     }
 
     await new Promise(r => setTimeout(r, 80));
@@ -383,7 +489,7 @@ async function tick() {
 
   // ── Execute ───────────────────────────────────────────────────────────
   if (bestCandidate) {
-    const { mint, score, baseScore, socialScore, reasons, priceData } = bestCandidate;
+    const { mint, score, baseScore, socialScore, ctBoost, reasons, priceData } = bestCandidate;
     const pair = priceData.pair;
     const symbol = pair.baseToken?.symbol || mint.slice(0, 6);
     const priceNative = priceData.priceNative;
@@ -415,13 +521,15 @@ async function tick() {
 
     trades.push({
       type: 'BUY', symbol, mint, solAmount: +solTotal.toFixed(6),
-      score, baseScore, socialScore,
+      score, baseScore, socialScore, ctBoost: ctBoost || 0,
       fee: +fee.toFixed(6), reasons: reasons.join(', '),
       time: new Date().toISOString()
     });
 
-    const msg = `📝 v3 🟢 BUY $${symbol}\n📊 Score: ${score} (social: ${socialScore}) — ${reasons.join(', ')}\n💰 ${solTotal.toFixed(4)} SOL\n💼 ${state.balanceSol.toFixed(2)} SOL | ${openCount + 1} positions`;
-    console.log(`[v3] 🟢 BUY $${symbol} | Score: ${score} (s:${socialScore}) | ${reasons.join(', ')}`);
+    const mcapStr = pair.marketCap || pair.fdv ? `$${Number(pair.marketCap || pair.fdv).toLocaleString()}` : '?';
+    const ctStr = ctBoost > 0 ? ` ct: +${ctBoost}` : '';
+    const msg = `📝 v3 🟢 BUY $${symbol} | MC: ${mcapStr}\n📊 Score: ${score} (social: ${socialScore}${ctStr}) — ${reasons.join(', ')}\n💰 ${solTotal.toFixed(4)} SOL\n💼 ${state.balanceSol.toFixed(2)} SOL | ${openCount + 1} positions\n<code>${mint}</code>`;
+    console.log(`[v3] 🟢 BUY $${symbol} | Score: ${score} (s:${socialScore} ct:${ctBoost}) | ${reasons.join(', ')}`);
     notifier.sendTelegram(msg);
   }
 
