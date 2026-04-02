@@ -4,11 +4,11 @@
 # Pair: HiSBtzHFeFDADpUAhYDdftqJCAi3XzwsTYsDDHqfMjTJ
 # Breakeven: $0.00385 / MC ~$3.87M
 
-PAIR="HiSBtzHFeFDADpUAhYDdftqJCAi3XzwsTYsDDHqfMjTJ"
+MINT="4fSWEw2wbYEUCcMtitzmeGUfqinoafXxkhqZrA9Gpump"
 BREAKEVEN=0.00385
 ENTRY_SOL=2.023
 
-data=$(curl -s "https://api.dexscreener.com/latest/dex/pairs/solana/$PAIR" 2>/dev/null)
+data=$(curl -s "https://api.dexscreener.com/latest/dex/tokens/$MINT" 2>/dev/null)
 price=$(echo "$data" | jq -r '.pairs[0].priceUsd // empty' 2>/dev/null)
 mcap=$(echo "$data" | jq -r '.pairs[0].marketCap // .pairs[0].fdv // empty' 2>/dev/null)
 
